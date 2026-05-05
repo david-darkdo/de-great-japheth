@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SystemLoginRouteImport } from './routes/system-login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload-image'
 
+const SystemLoginRoute = SystemLoginRouteImport.update({
+  id: '/system-login',
+  path: '/system-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -32,35 +38,46 @@ const ApiUploadImageRoute = ApiUploadImageRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/system-login': typeof SystemLoginRoute
   '/api/upload-image': typeof ApiUploadImageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/system-login': typeof SystemLoginRoute
   '/api/upload-image': typeof ApiUploadImageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/system-login': typeof SystemLoginRoute
   '/api/upload-image': typeof ApiUploadImageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/api/upload-image'
+  fullPaths: '/' | '/admin' | '/system-login' | '/api/upload-image'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/api/upload-image'
-  id: '__root__' | '/' | '/admin' | '/api/upload-image'
+  to: '/' | '/admin' | '/system-login' | '/api/upload-image'
+  id: '__root__' | '/' | '/admin' | '/system-login' | '/api/upload-image'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  SystemLoginRoute: typeof SystemLoginRoute
   ApiUploadImageRoute: typeof ApiUploadImageRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/system-login': {
+      id: '/system-login'
+      path: '/system-login'
+      fullPath: '/system-login'
+      preLoaderRoute: typeof SystemLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  SystemLoginRoute: SystemLoginRoute,
   ApiUploadImageRoute: ApiUploadImageRoute,
 }
 export const routeTree = rootRouteImport
