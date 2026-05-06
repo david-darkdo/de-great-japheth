@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, ShoppingBag, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
 import { ProductCard } from "@/routes/showroom";
+import { cart } from "@/lib/cart";
 
 export const Route = createFileRoute("/product/$id")({
   component: ProductPage,
@@ -23,9 +24,11 @@ type Product = {
 
 function ProductPage() {
   const { id } = Route.useParams();
+  const nav = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [added, setAdded] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -101,18 +104,18 @@ function ProductPage() {
         )}
 
         {/* 3. Description */}
-        <div className="mt-8">
-          <p className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
+        <div className="mt-8 animate-[fade-up_.6s_ease-out_both]">
+          <p className="text-xs tracking-[0.25em] text-gold uppercase">
             {product.category}{product.product_type ? ` · ${product.product_type}` : ""}
           </p>
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-primary mt-1">
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mt-1">
             {product.product_name}
           </h1>
           {product.item_code && (
             <p className="text-xs text-muted-foreground mt-1">Item code: {product.item_code}</p>
           )}
           {product.price != null && (
-            <p className="text-2xl font-semibold text-secondary mt-3">
+            <p className="font-display text-3xl text-shimmer mt-3">
               ₦{Number(product.price).toLocaleString()}
             </p>
           )}
@@ -122,14 +125,49 @@ function ProductPage() {
             </p>
           )}
 
-          <a
-            href={`https://wa.me/2347066786626?text=${waText}`}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--cta)] text-[var(--cta-foreground)] px-6 py-3 text-sm font-semibold hover:opacity-90"
-          >
-            <MessageCircle size={16} /> Enquire on WhatsApp
-          </a>
+          <div className="mt-7 flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => {
+                cart.add({
+                  id: product.id,
+                  product_name: product.product_name,
+                  item_code: product.item_code,
+                  category: product.category,
+                  product_image: product.product_image,
+                  price: product.price,
+                });
+                setAdded(true);
+                setTimeout(() => setAdded(false), 1600);
+              }}
+              className="btn-gold"
+            >
+              {added ? <><Check size={16} /> Added</> : <><ShoppingBag size={16} /> Add to Selection</>}
+            </button>
+            <button
+              onClick={() => {
+                cart.add({
+                  id: product.id,
+                  product_name: product.product_name,
+                  item_code: product.item_code,
+                  category: product.category,
+                  product_image: product.product_image,
+                  price: product.price,
+                });
+                nav({ to: "/cart" });
+              }}
+              className="btn-outline-gold"
+            >
+              Buy Now
+            </button>
+            <a
+              href={`https://wa.me/2347066786626?text=${waText}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-md border border-border px-6 py-3 text-sm font-semibold text-muted-foreground hover:text-gold hover:border-gold transition"
+            >
+              <MessageCircle size={16} /> Quick Enquire
+            </a>
+          </div>
         </div>
 
         {/* 4. Related */}

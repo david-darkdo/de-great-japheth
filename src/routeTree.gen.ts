@@ -13,6 +13,7 @@ import { Route as SystemLoginRouteImport } from './routes/system-login'
 import { Route as StartProjectRouteImport } from './routes/start-project'
 import { Route as ShowroomRouteImport } from './routes/showroom'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as CartRouteImport } from './routes/cart'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
@@ -37,6 +38,11 @@ const ShowroomRoute = ShowroomRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CartRoute = CartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -68,6 +74,7 @@ const ApiUploadImageRoute = ApiUploadImageRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/cart': typeof CartRoute
   '/contact': typeof ContactRoute
   '/showroom': typeof ShowroomRoute
   '/start-project': typeof StartProjectRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/cart': typeof CartRoute
   '/contact': typeof ContactRoute
   '/showroom': typeof ShowroomRoute
   '/start-project': typeof StartProjectRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/cart': typeof CartRoute
   '/contact': typeof ContactRoute
   '/showroom': typeof ShowroomRoute
   '/start-project': typeof StartProjectRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/cart'
     | '/contact'
     | '/showroom'
     | '/start-project'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/cart'
     | '/contact'
     | '/showroom'
     | '/start-project'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/cart'
     | '/contact'
     | '/showroom'
     | '/start-project'
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  CartRoute: typeof CartRoute
   ContactRoute: typeof ContactRoute
   ShowroomRoute: typeof ShowroomRoute
   StartProjectRoute: typeof StartProjectRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cart': {
+      id: '/cart'
+      path: '/cart'
+      fullPath: '/cart'
+      preLoaderRoute: typeof CartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -218,6 +238,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  CartRoute: CartRoute,
   ContactRoute: ContactRoute,
   ShowroomRoute: ShowroomRoute,
   StartProjectRoute: StartProjectRoute,
