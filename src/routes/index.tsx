@@ -215,9 +215,9 @@ function ProjectRequestForm() {
 
   if (done) {
     return (
-      <div className="bg-card border border-border rounded-lg p-8 text-center">
-        <CheckCircle2 className="mx-auto text-secondary mb-3" size={32} />
-        <h3 className="font-display text-xl text-primary">Request received</h3>
+      <div className="glass rounded-xl p-8 text-center animate-[scale-in_.4s_ease-out_both]">
+        <CheckCircle2 className="mx-auto text-gold mb-3" size={36} />
+        <h3 className="font-display text-xl text-foreground">Request received</h3>
         <p className="mt-2 text-muted-foreground text-sm">
           We'll get back to you shortly via your preferred contact method.
         </p>
@@ -226,7 +226,7 @@ function ProjectRequestForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="bg-card border border-border rounded-lg p-6 md:p-8 space-y-4">
+    <form onSubmit={onSubmit} className="glass rounded-xl p-6 md:p-8 space-y-4 animate-[fade-up_.6s_ease-out_both]">
       <div className="grid md:grid-cols-2 gap-4">
         <Field label="Full Name" name="full_name" required />
         <Field label="Phone Number" name="phone" type="tel" required />
@@ -234,8 +234,8 @@ function ProjectRequestForm() {
         <Field label="State" name="state" />
         <Field label="Project Type" name="project_type" placeholder="e.g. Doors, Tiles, Full finishing" />
         <div>
-          <label className="block text-sm font-medium text-primary mb-1.5">Preferred Contact</label>
-          <select name="preferred_contact" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+          <label className="block text-sm font-medium text-foreground mb-1.5">Preferred Contact</label>
+          <select name="preferred_contact" className="w-full rounded-md border border-border bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-gold transition">
             <option value="WhatsApp">WhatsApp</option>
             <option value="Phone">Phone</option>
             <option value="Email">Email</option>
@@ -243,20 +243,16 @@ function ProjectRequestForm() {
         </div>
       </div>
       <div>
-        <label className="block text-sm font-medium text-primary mb-1.5">Description</label>
+        <label className="block text-sm font-medium text-foreground mb-1.5">Description</label>
         <textarea
           name="description"
           rows={4}
           placeholder="Tell us about your project..."
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="w-full rounded-md border border-border bg-background/40 px-3 py-2 text-sm text-foreground focus:outline-none focus:border-gold transition"
         />
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full rounded-md bg-[var(--cta)] text-[var(--cta-foreground)] py-3 text-sm font-semibold hover:opacity-90 disabled:opacity-60"
-      >
+      <button type="submit" disabled={submitting} className="btn-gold w-full disabled:opacity-60">
         {submitting ? "Sending..." : "Send Project Request"}
       </button>
     </form>
@@ -268,13 +264,13 @@ function Field({ label, name, type = "text", required, placeholder }: {
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-primary mb-1.5">{label}{required && " *"}</label>
+      <label className="block text-sm font-medium text-foreground mb-1.5">{label}{required && " *"}</label>
       <input
         name={name}
         type={type}
         required={required}
         placeholder={placeholder}
-        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        className="w-full rounded-md border border-border bg-background/40 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold transition"
       />
     </div>
   );
