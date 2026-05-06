@@ -10,13 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SystemLoginRouteImport } from './routes/system-login'
+import { Route as StartProjectRouteImport } from './routes/start-project'
+import { Route as ShowroomRouteImport } from './routes/showroom'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProductIdRouteImport } from './routes/product.$id'
+import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload-image'
 
 const SystemLoginRoute = SystemLoginRouteImport.update({
   id: '/system-login',
   path: '/system-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartProjectRoute = StartProjectRouteImport.update({
+  id: '/start-project',
+  path: '/start-project',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShowroomRoute = ShowroomRouteImport.update({
+  id: '/showroom',
+  path: '/showroom',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -29,6 +49,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductIdRoute = ProductIdRouteImport.update({
+  id: '/product/$id',
+  path: '/product/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategorySlugRoute = CategorySlugRouteImport.update({
+  id: '/category/$slug',
+  path: '/category/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiUploadImageRoute = ApiUploadImageRouteImport.update({
   id: '/api/upload-image',
   path: '/api/upload-image',
@@ -38,35 +68,83 @@ const ApiUploadImageRoute = ApiUploadImageRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/contact': typeof ContactRoute
+  '/showroom': typeof ShowroomRoute
+  '/start-project': typeof StartProjectRoute
   '/system-login': typeof SystemLoginRoute
   '/api/upload-image': typeof ApiUploadImageRoute
+  '/category/$slug': typeof CategorySlugRoute
+  '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/contact': typeof ContactRoute
+  '/showroom': typeof ShowroomRoute
+  '/start-project': typeof StartProjectRoute
   '/system-login': typeof SystemLoginRoute
   '/api/upload-image': typeof ApiUploadImageRoute
+  '/category/$slug': typeof CategorySlugRoute
+  '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/contact': typeof ContactRoute
+  '/showroom': typeof ShowroomRoute
+  '/start-project': typeof StartProjectRoute
   '/system-login': typeof SystemLoginRoute
   '/api/upload-image': typeof ApiUploadImageRoute
+  '/category/$slug': typeof CategorySlugRoute
+  '/product/$id': typeof ProductIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/system-login' | '/api/upload-image'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/contact'
+    | '/showroom'
+    | '/start-project'
+    | '/system-login'
+    | '/api/upload-image'
+    | '/category/$slug'
+    | '/product/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/system-login' | '/api/upload-image'
-  id: '__root__' | '/' | '/admin' | '/system-login' | '/api/upload-image'
+  to:
+    | '/'
+    | '/admin'
+    | '/contact'
+    | '/showroom'
+    | '/start-project'
+    | '/system-login'
+    | '/api/upload-image'
+    | '/category/$slug'
+    | '/product/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/contact'
+    | '/showroom'
+    | '/start-project'
+    | '/system-login'
+    | '/api/upload-image'
+    | '/category/$slug'
+    | '/product/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  ContactRoute: typeof ContactRoute
+  ShowroomRoute: typeof ShowroomRoute
+  StartProjectRoute: typeof StartProjectRoute
   SystemLoginRoute: typeof SystemLoginRoute
   ApiUploadImageRoute: typeof ApiUploadImageRoute
+  CategorySlugRoute: typeof CategorySlugRoute
+  ProductIdRoute: typeof ProductIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -76,6 +154,27 @@ declare module '@tanstack/react-router' {
       path: '/system-login'
       fullPath: '/system-login'
       preLoaderRoute: typeof SystemLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start-project': {
+      id: '/start-project'
+      path: '/start-project'
+      fullPath: '/start-project'
+      preLoaderRoute: typeof StartProjectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/showroom': {
+      id: '/showroom'
+      path: '/showroom'
+      fullPath: '/showroom'
+      preLoaderRoute: typeof ShowroomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -92,6 +191,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/product/$id': {
+      id: '/product/$id'
+      path: '/product/$id'
+      fullPath: '/product/$id'
+      preLoaderRoute: typeof ProductIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/category/$slug': {
+      id: '/category/$slug'
+      path: '/category/$slug'
+      fullPath: '/category/$slug'
+      preLoaderRoute: typeof CategorySlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/upload-image': {
       id: '/api/upload-image'
       path: '/api/upload-image'
@@ -105,8 +218,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  ContactRoute: ContactRoute,
+  ShowroomRoute: ShowroomRoute,
+  StartProjectRoute: StartProjectRoute,
   SystemLoginRoute: SystemLoginRoute,
   ApiUploadImageRoute: ApiUploadImageRoute,
+  CategorySlugRoute: CategorySlugRoute,
+  ProductIdRoute: ProductIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
