@@ -24,9 +24,11 @@ type Product = {
 
 function ProductPage() {
   const { id } = Route.useParams();
+  const nav = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [added, setAdded] = useState(false);
 
   useEffect(() => {
     setLoading(true);
