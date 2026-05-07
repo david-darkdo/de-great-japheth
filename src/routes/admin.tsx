@@ -503,6 +503,7 @@ function EditProductModal({
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const editFileRef = useRef<HTMLInputElement>(null);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -555,11 +556,13 @@ function EditProductModal({
         )}
         <button
           type="button"
-          onClick={() => openSystemImagePicker(setFile, null)}
+          onClick={() => openSystemImagePicker(setFile, editFileRef.current)}
           className="block w-full text-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:bg-muted text-sm"
         >
           {file ? `Selected: ${file.name}` : "Replace Image"}
         </button>
+        <input ref={editFileRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="flex-1 border rounded py-2">Cancel</button>
           <button type="submit" disabled={busy}
