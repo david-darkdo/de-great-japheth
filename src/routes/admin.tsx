@@ -553,8 +553,11 @@ function EditProductModal({
         <h2 className="text-lg font-semibold">Edit Product</h2>
         <input className="w-full border rounded px-3 py-2" value={name}
           onChange={(e) => setName(e.target.value)} required />
-        <input className="w-full border rounded px-3 py-2" placeholder="Category" value={category}
-          onChange={(e) => setCategory(e.target.value)} />
+        <select className="w-full border rounded px-3 py-2 bg-background" value={category}
+          onChange={(e) => setCategory(e.target.value)}>
+          <option value="">— Category —</option>
+          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
         <input className="w-full border rounded px-3 py-2" type="number" step="0.01" placeholder="Price" value={price}
           onChange={(e) => setPrice(e.target.value)} />
         {(file ? URL.createObjectURL(file) : imageUrl) && (
