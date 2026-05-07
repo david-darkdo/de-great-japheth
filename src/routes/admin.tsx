@@ -27,6 +27,40 @@ type ActivityLog = {
 };
 
 type Tab = "dashboard" | "products" | "upload" | "customers" | "analytics";
+type ImageFileSetter = (file: File | null) => void;
+
+const IMAGE_PICKER_ACCEPT = ".jpg,.jpeg,.png,.webp,.gif";
+
+async function openSystemImagePicker(setFile: ImageFileSetter, fallbackInput: HTMLInputElement | null) {
+  const picker = (window as any).showOpenFilePicker;
+
+  if (typeof picker === "function") {
+    try {
+      const [handle] = await picker({
+        multiple: false,
+        excludeAcceptAllOption: false,
+        types: [
+          {
+            description: "Image files",
+            accept: {
+              "image/jpeg": [".jpg", ".jpeg"],
+              "image/png": [".png"],
+              "image/webp": [".webp"],
+              "image/gif": [".gif"],
+            },
+          },
+        ],
+      });
+      const file = await handle.getFile();
+      setFile(file);
+      return;
+    } catch (error: any) {
+      if (error?.name === "AbortError") return;
+    }
+  }
+
+  fallbackInput?.click();
+}
 
 function AdminDashboard() {
   const navigate = useNavigate();
