@@ -273,27 +273,43 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
+  const [initialFile, setInitialFile] = useState<File | null>(null);
+  const [finishedFile, setFinishedFile] = useState<File | null>(null);
+  const [initialPreview, setInitialPreview] = useState<string | null>(null);
+  const [finishedPreview, setFinishedPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const initRef = useRef<HTMLInputElement>(null);
+  const finRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!file) return setPreviewUrl(null);
-    const u = URL.createObjectURL(file);
-    setPreviewUrl(u);
+    if (!initialFile) return setInitialPreview(null);
+    const u = URL.createObjectURL(initialFile);
+    setInitialPreview(u);
     return () => URL.revokeObjectURL(u);
-  }, [file]);
+  }, [initialFile]);
+
+  useEffect(() => {
+    if (!finishedFile) return setFinishedPreview(null);
+    const u = URL.createObjectURL(finishedFile);
+    setFinishedPreview(u);
+    return () => URL.revokeObjectURL(u);
+  }, [finishedFile]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return setStatus("Select an image.");
+    if (!initialFile) return setStatus("Select the initial product image.");
     if (!name.trim()) return setStatus("Name required.");
     setBusy(true);
-    setStatus("Uploading...");
+    setStatus("Uploading initial image...");
     try {
-      const url = await uploadImage(file);
+      const productImageUrl = await uploadImage(initialFile);
+      let finishedImageUrl: string | null = null;
+      if (finishedFile) {
+        setStatus("Uploading finished image...");
+        finishedImageUrl = await uploadImage(finishedFile);
+      }
       setStatus("Saving...");
       const { data, error } = await supabase
         .from("products")
@@ -301,15 +317,19 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           product_name: name,
           category: category || null,
           price: price ? Number(price) : null,
-          product_image: url,
+          product_image: productImageUrl,
+          finished_image: finishedImageUrl,
+          full_details: description || null,
         })
         .select()
         .single();
       if (error) throw error;
       console.log("[upload] saved:", data);
       setStatus("✓ Uploaded");
-      setName(""); setCategory(""); setPrice(""); setFile(null);
-      if (fileRef.current) fileRef.current.value = "";
+      setName(""); setCategory(""); setPrice(""); setDescription("");
+      setInitialFile(null); setFinishedFile(null);
+      if (initRef.current) initRef.current.value = "";
+      if (finRef.current) finRef.current.value = "";
       onDone();
     } catch (err: any) {
       console.error(err);
@@ -330,21 +350,40 @@ function UploadTab({ onDone }: { onDone: () => void }) {
       <input type="number" step="0.01" placeholder="Price" value={price}
         onChange={(e) => setPrice(e.target.value)}
         className="w-full border rounded px-3 py-2" />
+      <textarea
+        placeholder="Product Description"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        rows={4}
+        className="w-full border rounded px-3 py-2"
+      />
+
       <div>
-        <label htmlFor="upl-file"
+        <p className="text-sm font-medium mb-2">1. Initial Product Image *</p>
+        <label htmlFor="upl-init"
           className="block w-full text-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-muted">
-          {file ? `Selected: ${file.name}` : "Tap to Upload Image"}
+          {initialFile ? `Selected: ${initialFile.name}` : "Tap to Upload Initial Product Image"}
         </label>
-        <input id="upl-file" ref={fileRef} type="file" className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0] ?? null;
-            console.log("File selected:", f);
-            setFile(f);
-          }} />
+        <input id="upl-init" ref={initRef} type="file" accept="image/*" className="hidden"
+          onChange={(e) => setInitialFile(e.target.files?.[0] ?? null)} />
+        {initialPreview && (
+          <img src={initialPreview} alt="initial preview" className="mt-2 w-full max-h-56 object-contain border rounded" />
+        )}
       </div>
-      {previewUrl && (
-        <img src={previewUrl} alt="preview" className="w-full max-h-64 object-contain border rounded" />
-      )}
+
+      <div>
+        <p className="text-sm font-medium mb-2">2. Finished Product Image (installed)</p>
+        <label htmlFor="upl-fin"
+          className="block w-full text-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-muted">
+          {finishedFile ? `Selected: ${finishedFile.name}` : "Tap to Upload Finished Product Image"}
+        </label>
+        <input id="upl-fin" ref={finRef} type="file" accept="image/*" className="hidden"
+          onChange={(e) => setFinishedFile(e.target.files?.[0] ?? null)} />
+        {finishedPreview && (
+          <img src={finishedPreview} alt="finished preview" className="mt-2 w-full max-h-56 object-contain border rounded" />
+        )}
+      </div>
+
       <button type="submit" disabled={busy}
         className="w-full bg-primary text-primary-foreground rounded py-2 disabled:opacity-50">
         {busy ? "Uploading..." : "Save Product"}
