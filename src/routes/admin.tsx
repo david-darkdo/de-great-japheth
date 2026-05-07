@@ -29,7 +29,7 @@ type ActivityLog = {
 type Tab = "dashboard" | "products" | "upload" | "customers" | "analytics";
 type ImageFileSetter = (file: File | null) => void;
 
-const IMAGE_PICKER_ACCEPT = ".jpg,.jpeg,.png,.webp,.gif";
+const IMAGE_PICKER_ACCEPT = "";
 
 async function openSystemImagePicker(setFile: ImageFileSetter, fallbackInput: HTMLInputElement | null) {
   const picker = (window as any).showOpenFilePicker;
@@ -553,11 +553,13 @@ function EditProductModal({
             className="w-full max-h-48 object-contain border rounded"
           />
         )}
-        <label className="block w-full text-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:bg-muted text-sm">
+        <button
+          type="button"
+          onClick={() => openSystemImagePicker(setFile, null)}
+          className="block w-full text-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:bg-muted text-sm"
+        >
           {file ? `Selected: ${file.name}` : "Replace Image"}
-          <input type="file" className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        </label>
+        </button>
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="flex-1 border rounded py-2">Cancel</button>
           <button type="submit" disabled={busy}
