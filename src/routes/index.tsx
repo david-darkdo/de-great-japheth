@@ -5,6 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
 import { HOME_CATEGORIES, categorySlug } from "@/lib/categories";
 import heroImg from "@/assets/hero-interior.jpg";
+import catSecurityDoors from "@/assets/cat-security-doors.png";
+import catElectrical from "@/assets/cat-electrical.png";
+import catPlumbing from "@/assets/cat-plumbing.png";
+import catCeiling from "@/assets/cat-ceiling.png";
+
+const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  "Security Doors": catSecurityDoors,
+  "Electrical": catElectrical,
+  "Plumbing": catPlumbing,
+  "Ceiling Materials": catCeiling,
+};
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -98,18 +109,21 @@ function HomePage() {
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <div className="relative aspect-square overflow-hidden rounded-xl bg-muted border border-border hover-lift">
-                {catImages[cat] ? (
-                  <img
-                    src={catImages[cat]}
-                    alt={cat}
-                    loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                    {cat}
-                  </div>
-                )}
+                {(() => {
+                  const src = catImages[cat] || CATEGORY_FALLBACK_IMAGES[cat];
+                  return src ? (
+                    <img
+                      src={src}
+                      alt={cat}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                      {cat}
+                    </div>
+                  );
+                })()}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
                 <div className="absolute bottom-3 left-3 right-3">
                   <h3 className="font-display text-base md:text-lg font-semibold text-white drop-shadow group-hover:text-gold transition">{cat}</h3>
