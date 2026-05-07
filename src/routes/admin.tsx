@@ -394,11 +394,12 @@ function UploadTab({ onDone }: { onDone: () => void }) {
 
       <div>
         <p className="text-sm font-medium mb-2">1. Initial Product Image *</p>
-        <label htmlFor="upl-init"
+        <button type="button"
+          onClick={() => openSystemImagePicker(setInitialFile, initRef.current)}
           className="block w-full text-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-muted">
           {initialFile ? `Selected: ${initialFile.name}` : "Tap to Upload Initial Product Image"}
-        </label>
-        <input id="upl-init" ref={initRef} type="file" accept="image/*" className="hidden"
+        </button>
+        <input id="upl-init" ref={initRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
           onChange={(e) => setInitialFile(e.target.files?.[0] ?? null)} />
         {initialPreview && (
           <img src={initialPreview} alt="initial preview" className="mt-2 w-full max-h-56 object-contain border rounded" />
@@ -407,11 +408,12 @@ function UploadTab({ onDone }: { onDone: () => void }) {
 
       <div>
         <p className="text-sm font-medium mb-2">2. Finished Product Image (installed)</p>
-        <label htmlFor="upl-fin"
+        <button type="button"
+          onClick={() => openSystemImagePicker(setFinishedFile, finRef.current)}
           className="block w-full text-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-muted">
           {finishedFile ? `Selected: ${finishedFile.name}` : "Tap to Upload Finished Product Image"}
-        </label>
-        <input id="upl-fin" ref={finRef} type="file" accept="image/*" className="hidden"
+        </button>
+        <input id="upl-fin" ref={finRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
           onChange={(e) => setFinishedFile(e.target.files?.[0] ?? null)} />
         {finishedPreview && (
           <img src={finishedPreview} alt="finished preview" className="mt-2 w-full max-h-56 object-contain border rounded" />
