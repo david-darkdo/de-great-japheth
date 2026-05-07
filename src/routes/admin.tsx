@@ -334,9 +334,9 @@ function UploadTab({ onDone }: { onDone: () => void }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!initialFile) return setStatus("Select the initial product image.");
     if (!name.trim()) return setStatus("Name required.");
-    setBusy(true);
+    if (!category) return setStatus("Select a category.");
+    if (!initialFile) return setStatus("Select the initial product image.");
     setStatus("Uploading initial image...");
     try {
       const productImageUrl = await uploadImage(initialFile);
