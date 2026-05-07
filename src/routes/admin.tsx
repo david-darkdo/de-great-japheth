@@ -337,6 +337,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
     if (!name.trim()) return setStatus("Name required.");
     if (!category) return setStatus("Select a category.");
     if (!initialFile) return setStatus("Select the initial product image.");
+    setBusy(true);
     setStatus("Uploading initial image...");
     try {
       const productImageUrl = await uploadImage(initialFile);
