@@ -27,6 +27,40 @@ type ActivityLog = {
 };
 
 type Tab = "dashboard" | "products" | "upload" | "customers" | "analytics";
+type ImageFileSetter = (file: File | null) => void;
+
+const IMAGE_PICKER_ACCEPT = "";
+
+async function openSystemImagePicker(setFile: ImageFileSetter, fallbackInput: HTMLInputElement | null) {
+  const picker = (window as any).showOpenFilePicker;
+
+  if (typeof picker === "function") {
+    try {
+      const [handle] = await picker({
+        multiple: false,
+        excludeAcceptAllOption: false,
+        types: [
+          {
+            description: "Image files",
+            accept: {
+              "image/jpeg": [".jpg", ".jpeg"],
+              "image/png": [".png"],
+              "image/webp": [".webp"],
+              "image/gif": [".gif"],
+            },
+          },
+        ],
+      });
+      const file = await handle.getFile();
+      setFile(file);
+      return;
+    } catch (error: any) {
+      if (error?.name === "AbortError") return;
+    }
+  }
+
+  fallbackInput?.click();
+}
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -360,11 +394,12 @@ function UploadTab({ onDone }: { onDone: () => void }) {
 
       <div>
         <p className="text-sm font-medium mb-2">1. Initial Product Image *</p>
-        <label htmlFor="upl-init"
+        <button type="button"
+          onClick={() => openSystemImagePicker(setInitialFile, initRef.current)}
           className="block w-full text-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-muted">
           {initialFile ? `Selected: ${initialFile.name}` : "Tap to Upload Initial Product Image"}
-        </label>
-        <input id="upl-init" ref={initRef} type="file" accept="image/*" className="hidden"
+        </button>
+        <input id="upl-init" ref={initRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
           onChange={(e) => setInitialFile(e.target.files?.[0] ?? null)} />
         {initialPreview && (
           <img src={initialPreview} alt="initial preview" className="mt-2 w-full max-h-56 object-contain border rounded" />
@@ -373,11 +408,12 @@ function UploadTab({ onDone }: { onDone: () => void }) {
 
       <div>
         <p className="text-sm font-medium mb-2">2. Finished Product Image (installed)</p>
-        <label htmlFor="upl-fin"
+        <button type="button"
+          onClick={() => openSystemImagePicker(setFinishedFile, finRef.current)}
           className="block w-full text-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:bg-muted">
           {finishedFile ? `Selected: ${finishedFile.name}` : "Tap to Upload Finished Product Image"}
-        </label>
-        <input id="upl-fin" ref={finRef} type="file" accept="image/*" className="hidden"
+        </button>
+        <input id="upl-fin" ref={finRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
           onChange={(e) => setFinishedFile(e.target.files?.[0] ?? null)} />
         {finishedPreview && (
           <img src={finishedPreview} alt="finished preview" className="mt-2 w-full max-h-56 object-contain border rounded" />
@@ -467,6 +503,7 @@ function EditProductModal({
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const editFileRef = useRef<HTMLInputElement>(null);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -517,11 +554,15 @@ function EditProductModal({
             className="w-full max-h-48 object-contain border rounded"
           />
         )}
-        <label className="block w-full text-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:bg-muted text-sm">
+        <button
+          type="button"
+          onClick={() => openSystemImagePicker(setFile, editFileRef.current)}
+          className="block w-full text-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:bg-muted text-sm"
+        >
           {file ? `Selected: ${file.name}` : "Replace Image"}
-          <input type="file" className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        </label>
+        </button>
+        <input ref={editFileRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <div className="flex gap-2">
           <button type="button" onClick={onClose} className="flex-1 border rounded py-2">Cancel</button>
           <button type="submit" disabled={busy}
