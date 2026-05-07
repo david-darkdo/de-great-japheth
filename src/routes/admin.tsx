@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { CATEGORIES } from "@/lib/categories";
 
 export const Route = createFileRoute("/admin")({
   component: AdminDashboard,
@@ -378,9 +379,17 @@ function UploadTab({ onDone }: { onDone: () => void }) {
       <input type="text" placeholder="Product Name" value={name}
         onChange={(e) => setName(e.target.value)}
         className="w-full border rounded px-3 py-2" required />
-      <input type="text" placeholder="Category" value={category}
+      <select
+        value={category}
         onChange={(e) => setCategory(e.target.value)}
-        className="w-full border rounded px-3 py-2" />
+        required
+        className="w-full border rounded px-3 py-2 bg-background"
+      >
+        <option value="">Select Category *</option>
+        {CATEGORIES.map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
       <input type="number" step="0.01" placeholder="Price" value={price}
         onChange={(e) => setPrice(e.target.value)}
         className="w-full border rounded px-3 py-2" />
