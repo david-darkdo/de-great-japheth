@@ -18,7 +18,16 @@ type Product = {
   full_details?: string | null;
 };
 
-type Customer = { id: string; email: string; created_at: string };
+type Customer = {
+  id: string;
+  email: string;
+  created_at: string;
+  full_name?: string | null;
+  phone?: string | null;
+  provider?: string | null;
+  last_login_at?: string | null;
+  user_id?: string | null;
+};
 type ActivityLog = {
   id: string;
   action: string;
@@ -26,8 +35,9 @@ type ActivityLog = {
   created_at: string;
   details: any;
 };
+type UserRole = { id: string; user_id: string; email: string | null; role: string; created_at: string };
 
-type Tab = "dashboard" | "products" | "upload" | "customers" | "analytics";
+type Tab = "dashboard" | "products" | "upload" | "customers" | "users" | "analytics";
 type ImageFileSetter = (file: File | null) => void;
 
 const IMAGE_PICKER_ACCEPT = "";
