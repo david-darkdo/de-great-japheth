@@ -462,26 +462,126 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   );
 }
 
-function CustomersTab({ customers }: { customers: Customer[] }) {
+function CustomersTab({ customers, logs }: { customers: Customer[]; logs: ActivityLog[] }) {
   if (customers.length === 0) return <p className="text-muted-foreground">No customers yet.</p>;
+  const requestsByEmail = new Map<string, number>();
+  logs.forEach((l) => {
+    if (!l.user_email) return;
+    if ((l.action || "").toLowerCase().includes("whatsapp")) {
+      requestsByEmail.set(l.user_email, (requestsByEmail.get(l.user_email) || 0) + 1);
+    }
+  });
+  const lastByEmail = new Map<string, string>();
+  logs.forEach((l) => {
+    if (!l.user_email) return;
+    if (!lastByEmail.has(l.user_email)) lastByEmail.set(l.user_email, l.created_at);
+  });
+
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="border rounded-lg overflow-x-auto">
+      <table className="w-full text-sm min-w-[720px]">
         <thead className="bg-muted">
           <tr>
+            <th className="text-left p-3">Name</th>
             <th className="text-left p-3">Email</th>
+            <th className="text-left p-3">Phone</th>
+            <th className="text-left p-3">Provider</th>
             <th className="text-left p-3">Joined</th>
+            <th className="text-left p-3">Last Activity</th>
+            <th className="text-left p-3">Requests</th>
           </tr>
         </thead>
         <tbody>
           {customers.map((c) => (
             <tr key={c.id} className="border-t">
+              <td className="p-3">{c.full_name || "—"}</td>
               <td className="p-3">{c.email}</td>
+              <td className="p-3">{c.phone || "—"}</td>
+              <td className="p-3 capitalize">{c.provider || "email"}</td>
               <td className="p-3">{new Date(c.created_at).toLocaleString()}</td>
+              <td className="p-3">{lastByEmail.get(c.email) ? new Date(lastByEmail.get(c.email)!).toLocaleString() : (c.last_login_at ? new Date(c.last_login_at).toLocaleString() : "—")}</td>
+              <td className="p-3">{requestsByEmail.get(c.email) || 0}</td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const ROLE_OPTIONS = ["customer", "staff", "super_admin"] as const;
+
+function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customers: Customer[]; onChanged: () => void }) {
+  // Group roles per user
+  const rolesByUser = new Map<string, UserRole[]>();
+  roles.forEach((r) => {
+    const arr = rolesByUser.get(r.user_id) || [];
+    arr.push(r);
+    rolesByUser.set(r.user_id, arr);
+  });
+  const customerByUserId = new Map(customers.filter((c) => c.user_id).map((c) => [c.user_id!, c]));
+
+  // Union of users (from customers + roles)
+  const userIds = new Set<string>();
+  customers.forEach((c) => c.user_id && userIds.add(c.user_id));
+  roles.forEach((r) => userIds.add(r.user_id));
+
+  const setRole = async (user_id: string, email: string | null, newRole: string) => {
+    // Replace all roles for that user with the chosen one
+    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", user_id);
+    if (delErr) { alert("Failed: " + delErr.message); return; }
+    const { error: insErr } = await supabase.from("user_roles").insert({ user_id, email, role: newRole as any });
+    if (insErr) { alert("Failed: " + insErr.message); return; }
+    onChanged();
+  };
+
+  if (userIds.size === 0) return <p className="text-muted-foreground">No users yet.</p>;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Promote any registered user to <span className="font-medium">staff</span> or <span className="font-medium">super_admin</span> to grant admin dashboard access.
+      </p>
+      <div className="border rounded-lg overflow-x-auto">
+        <table className="w-full text-sm min-w-[720px]">
+          <thead className="bg-muted">
+            <tr>
+              <th className="text-left p-3">Name</th>
+              <th className="text-left p-3">Email</th>
+              <th className="text-left p-3">Phone</th>
+              <th className="text-left p-3">Current Role</th>
+              <th className="text-left p-3">Change Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from(userIds).map((uid) => {
+              const c = customerByUserId.get(uid);
+              const userRoles = rolesByUser.get(uid) || [];
+              const currentRole = userRoles[0]?.role || "customer";
+              const email = c?.email || userRoles[0]?.email || null;
+              return (
+                <tr key={uid} className="border-t">
+                  <td className="p-3">{c?.full_name || "—"}</td>
+                  <td className="p-3">{email || "—"}</td>
+                  <td className="p-3">{c?.phone || "—"}</td>
+                  <td className="p-3 capitalize">{currentRole}</td>
+                  <td className="p-3">
+                    <select
+                      value={currentRole}
+                      onChange={(e) => setRole(uid, email, e.target.value)}
+                      className="border rounded px-2 py-1 bg-background"
+                    >
+                      {ROLE_OPTIONS.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
