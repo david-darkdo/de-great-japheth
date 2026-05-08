@@ -232,7 +232,8 @@ function AdminDashboard() {
           <ProductsTab products={products} onEdit={setEditing} onDelete={deleteProduct} />
         )}
         {tab === "upload" && <UploadTab onDone={loadProducts} />}
-        {tab === "customers" && <CustomersTab customers={customers} />}
+        {tab === "customers" && <CustomersTab customers={customers} logs={logs} />}
+        {tab === "users" && <UsersTab roles={roles} customers={customers} onChanged={loadRoles} />}
         {tab === "analytics" && <AnalyticsTab logs={logs} />}
       </main>
 
