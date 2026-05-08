@@ -127,7 +127,7 @@ function AdminDashboard() {
   const loadCustomers = useCallback(async () => {
     const { data, error } = await supabase
       .from("customers")
-      .select("id, email, created_at")
+      .select("id, email, created_at, full_name, phone, provider, last_login_at, user_id")
       .order("created_at", { ascending: false });
     console.log("[admin] customers:", data?.length, error);
     setCustomers((data as Customer[]) || []);
@@ -138,9 +138,18 @@ function AdminDashboard() {
       .from("activity_logs")
       .select("id, action, user_email, created_at, details")
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(50);
     console.log("[admin] logs:", data?.length, error);
     setLogs((data as ActivityLog[]) || []);
+  }, []);
+
+  const loadRoles = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("id, user_id, email, role, created_at")
+      .order("created_at", { ascending: false });
+    console.log("[admin] roles:", data?.length, error);
+    setRoles((data as UserRole[]) || []);
   }, []);
 
   useEffect(() => {
@@ -148,17 +157,19 @@ function AdminDashboard() {
     loadProducts();
     loadCustomers();
     loadLogs();
+    loadRoles();
 
     const ch = supabase
       .channel("admin-products")
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadProducts())
       .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, () => loadCustomers())
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, () => loadLogs())
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => loadRoles())
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [authorized, loadProducts, loadCustomers, loadLogs]);
+  }, [authorized, loadProducts, loadCustomers, loadLogs, loadRoles]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
