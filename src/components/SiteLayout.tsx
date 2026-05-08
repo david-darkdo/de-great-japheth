@@ -68,6 +68,26 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                 </span>
               )}
             </Link>
+            {userEmail ? (
+              <button
+                onClick={signOut}
+                title={`Sign out (${userEmail})`}
+                className="hidden md:inline-flex p-2 rounded-md text-foreground hover:text-gold transition-colors"
+                aria-label="Sign out"
+              >
+                <LogOut size={18} />
+              </button>
+            ) : (
+              <Link
+                to="/auth"
+                search={{ redirect: "/cart", mode: "signin" }}
+                className="hidden md:inline-flex p-2 rounded-md text-foreground hover:text-gold transition-colors"
+                aria-label="Sign in"
+                title="Sign in"
+              >
+                <LogIn size={18} />
+              </Link>
+            )}
             <button
               className="md:hidden p-2 -mr-2 text-foreground"
               onClick={() => setOpen((v) => !v)}
