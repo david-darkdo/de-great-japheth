@@ -83,6 +83,7 @@ function AdminDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
 
   // Auth + role check
