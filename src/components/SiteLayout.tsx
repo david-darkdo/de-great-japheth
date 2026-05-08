@@ -16,11 +16,22 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
   const { location } = useRouterState();
   const items = useCart();
   const count = items.reduce((s, x) => s + x.qty, 0);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUserEmail(data.session?.user?.email ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => {
+      setUserEmail(sess?.user?.email ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     setOpen(false);
   }, [location.pathname]);
+
+  const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
     <div className="min-h-screen flex flex-col text-foreground">
