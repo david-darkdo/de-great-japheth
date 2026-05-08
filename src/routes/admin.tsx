@@ -18,7 +18,16 @@ type Product = {
   full_details?: string | null;
 };
 
-type Customer = { id: string; email: string; created_at: string };
+type Customer = {
+  id: string;
+  email: string;
+  created_at: string;
+  full_name?: string | null;
+  phone?: string | null;
+  provider?: string | null;
+  last_login_at?: string | null;
+  user_id?: string | null;
+};
 type ActivityLog = {
   id: string;
   action: string;
@@ -26,8 +35,9 @@ type ActivityLog = {
   created_at: string;
   details: any;
 };
+type UserRole = { id: string; user_id: string; email: string | null; role: string; created_at: string };
 
-type Tab = "dashboard" | "products" | "upload" | "customers" | "analytics";
+type Tab = "dashboard" | "products" | "upload" | "customers" | "users" | "analytics";
 type ImageFileSetter = (file: File | null) => void;
 
 const IMAGE_PICKER_ACCEPT = "";
@@ -73,6 +83,7 @@ function AdminDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [roles, setRoles] = useState<UserRole[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
 
   // Auth + role check
@@ -116,7 +127,7 @@ function AdminDashboard() {
   const loadCustomers = useCallback(async () => {
     const { data, error } = await supabase
       .from("customers")
-      .select("id, email, created_at")
+      .select("id, email, created_at, full_name, phone, provider, last_login_at, user_id")
       .order("created_at", { ascending: false });
     console.log("[admin] customers:", data?.length, error);
     setCustomers((data as Customer[]) || []);
@@ -127,9 +138,18 @@ function AdminDashboard() {
       .from("activity_logs")
       .select("id, action, user_email, created_at, details")
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(50);
     console.log("[admin] logs:", data?.length, error);
     setLogs((data as ActivityLog[]) || []);
+  }, []);
+
+  const loadRoles = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("id, user_id, email, role, created_at")
+      .order("created_at", { ascending: false });
+    console.log("[admin] roles:", data?.length, error);
+    setRoles((data as UserRole[]) || []);
   }, []);
 
   useEffect(() => {
@@ -137,17 +157,19 @@ function AdminDashboard() {
     loadProducts();
     loadCustomers();
     loadLogs();
+    loadRoles();
 
     const ch = supabase
       .channel("admin-products")
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadProducts())
       .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, () => loadCustomers())
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, () => loadLogs())
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => loadRoles())
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [authorized, loadProducts, loadCustomers, loadLogs]);
+  }, [authorized, loadProducts, loadCustomers, loadLogs, loadRoles]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -184,7 +206,7 @@ function AdminDashboard() {
           </div>
         </div>
         <nav className="max-w-6xl mx-auto px-6 flex gap-2 overflow-x-auto">
-          {(["dashboard", "products", "upload", "customers", "analytics"] as Tab[]).map((t) => (
+          {(["dashboard", "products", "upload", "customers", "users", "analytics"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -210,7 +232,8 @@ function AdminDashboard() {
           <ProductsTab products={products} onEdit={setEditing} onDelete={deleteProduct} />
         )}
         {tab === "upload" && <UploadTab onDone={loadProducts} />}
-        {tab === "customers" && <CustomersTab customers={customers} />}
+        {tab === "customers" && <CustomersTab customers={customers} logs={logs} />}
+        {tab === "users" && <UsersTab roles={roles} customers={customers} onChanged={loadRoles} />}
         {tab === "analytics" && <AnalyticsTab logs={logs} />}
       </main>
 
@@ -439,26 +462,126 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   );
 }
 
-function CustomersTab({ customers }: { customers: Customer[] }) {
+function CustomersTab({ customers, logs }: { customers: Customer[]; logs: ActivityLog[] }) {
   if (customers.length === 0) return <p className="text-muted-foreground">No customers yet.</p>;
+  const requestsByEmail = new Map<string, number>();
+  logs.forEach((l) => {
+    if (!l.user_email) return;
+    if ((l.action || "").toLowerCase().includes("whatsapp")) {
+      requestsByEmail.set(l.user_email, (requestsByEmail.get(l.user_email) || 0) + 1);
+    }
+  });
+  const lastByEmail = new Map<string, string>();
+  logs.forEach((l) => {
+    if (!l.user_email) return;
+    if (!lastByEmail.has(l.user_email)) lastByEmail.set(l.user_email, l.created_at);
+  });
+
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="border rounded-lg overflow-x-auto">
+      <table className="w-full text-sm min-w-[720px]">
         <thead className="bg-muted">
           <tr>
+            <th className="text-left p-3">Name</th>
             <th className="text-left p-3">Email</th>
+            <th className="text-left p-3">Phone</th>
+            <th className="text-left p-3">Provider</th>
             <th className="text-left p-3">Joined</th>
+            <th className="text-left p-3">Last Activity</th>
+            <th className="text-left p-3">Requests</th>
           </tr>
         </thead>
         <tbody>
           {customers.map((c) => (
             <tr key={c.id} className="border-t">
+              <td className="p-3">{c.full_name || "—"}</td>
               <td className="p-3">{c.email}</td>
+              <td className="p-3">{c.phone || "—"}</td>
+              <td className="p-3 capitalize">{c.provider || "email"}</td>
               <td className="p-3">{new Date(c.created_at).toLocaleString()}</td>
+              <td className="p-3">{lastByEmail.get(c.email) ? new Date(lastByEmail.get(c.email)!).toLocaleString() : (c.last_login_at ? new Date(c.last_login_at).toLocaleString() : "—")}</td>
+              <td className="p-3">{requestsByEmail.get(c.email) || 0}</td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const ROLE_OPTIONS = ["customer", "staff", "super_admin"] as const;
+
+function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customers: Customer[]; onChanged: () => void }) {
+  // Group roles per user
+  const rolesByUser = new Map<string, UserRole[]>();
+  roles.forEach((r) => {
+    const arr = rolesByUser.get(r.user_id) || [];
+    arr.push(r);
+    rolesByUser.set(r.user_id, arr);
+  });
+  const customerByUserId = new Map(customers.filter((c) => c.user_id).map((c) => [c.user_id!, c]));
+
+  // Union of users (from customers + roles)
+  const userIds = new Set<string>();
+  customers.forEach((c) => c.user_id && userIds.add(c.user_id));
+  roles.forEach((r) => userIds.add(r.user_id));
+
+  const setRole = async (user_id: string, email: string | null, newRole: string) => {
+    // Replace all roles for that user with the chosen one
+    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", user_id);
+    if (delErr) { alert("Failed: " + delErr.message); return; }
+    const { error: insErr } = await supabase.from("user_roles").insert({ user_id, email, role: newRole as any });
+    if (insErr) { alert("Failed: " + insErr.message); return; }
+    onChanged();
+  };
+
+  if (userIds.size === 0) return <p className="text-muted-foreground">No users yet.</p>;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Promote any registered user to <span className="font-medium">staff</span> or <span className="font-medium">super_admin</span> to grant admin dashboard access.
+      </p>
+      <div className="border rounded-lg overflow-x-auto">
+        <table className="w-full text-sm min-w-[720px]">
+          <thead className="bg-muted">
+            <tr>
+              <th className="text-left p-3">Name</th>
+              <th className="text-left p-3">Email</th>
+              <th className="text-left p-3">Phone</th>
+              <th className="text-left p-3">Current Role</th>
+              <th className="text-left p-3">Change Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from(userIds).map((uid) => {
+              const c = customerByUserId.get(uid);
+              const userRoles = rolesByUser.get(uid) || [];
+              const currentRole = userRoles[0]?.role || "customer";
+              const email = c?.email || userRoles[0]?.email || null;
+              return (
+                <tr key={uid} className="border-t">
+                  <td className="p-3">{c?.full_name || "—"}</td>
+                  <td className="p-3">{email || "—"}</td>
+                  <td className="p-3">{c?.phone || "—"}</td>
+                  <td className="p-3 capitalize">{currentRole}</td>
+                  <td className="p-3">
+                    <select
+                      value={currentRole}
+                      onChange={(e) => setRole(uid, email, e.target.value)}
+                      className="border rounded px-2 py-1 bg-background"
+                    >
+                      {ROLE_OPTIONS.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

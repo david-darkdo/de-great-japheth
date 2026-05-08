@@ -1,7 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, MapPin, Phone, Mail, ShoppingBag } from "lucide-react";
+import { Menu, X, MapPin, Phone, Mail, ShoppingBag, LogIn, LogOut, User } from "lucide-react";
 import { useCart } from "@/lib/cart";
+import { supabase } from "@/integrations/supabase/client";
 
 const NAV = [
   { to: "/", label: "Home" },
@@ -15,11 +16,22 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
   const { location } = useRouterState();
   const items = useCart();
   const count = items.reduce((s, x) => s + x.qty, 0);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUserEmail(data.session?.user?.email ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => {
+      setUserEmail(sess?.user?.email ?? null);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     setOpen(false);
   }, [location.pathname]);
+
+  const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
     <div className="min-h-screen flex flex-col text-foreground">
@@ -56,6 +68,26 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                 </span>
               )}
             </Link>
+            {userEmail ? (
+              <button
+                onClick={signOut}
+                title={`Sign out (${userEmail})`}
+                className="hidden md:inline-flex p-2 rounded-md text-foreground hover:text-gold transition-colors"
+                aria-label="Sign out"
+              >
+                <LogOut size={18} />
+              </button>
+            ) : (
+              <Link
+                to="/auth"
+                search={{ redirect: "/cart", mode: "signin" }}
+                className="hidden md:inline-flex p-2 rounded-md text-foreground hover:text-gold transition-colors"
+                aria-label="Sign in"
+                title="Sign in"
+              >
+                <LogIn size={18} />
+              </Link>
+            )}
             <button
               className="md:hidden p-2 -mr-2 text-foreground"
               onClick={() => setOpen((v) => !v)}
@@ -77,6 +109,20 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                   {n.label}
                 </Link>
               ))}
+              {userEmail ? (
+                <>
+                  <div className="py-3 text-xs text-muted-foreground border-b border-border flex items-center gap-2">
+                    <User size={14} className="text-gold" /> {userEmail}
+                  </div>
+                  <button onClick={signOut} className="py-3 text-base text-left text-foreground hover:text-gold transition inline-flex items-center gap-2">
+                    <LogOut size={16} /> Sign out
+                  </button>
+                </>
+              ) : (
+                <Link to="/auth" search={{ redirect: "/cart", mode: "signin" }} className="py-3 text-base text-gold hover:underline inline-flex items-center gap-2">
+                  <LogIn size={16} /> Sign in / Create account
+                </Link>
+              )}
             </nav>
           </div>
         )}
