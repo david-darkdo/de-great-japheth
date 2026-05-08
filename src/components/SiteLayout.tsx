@@ -89,6 +89,20 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                   {n.label}
                 </Link>
               ))}
+              {userEmail ? (
+                <>
+                  <div className="py-3 text-xs text-muted-foreground border-b border-border flex items-center gap-2">
+                    <User size={14} className="text-gold" /> {userEmail}
+                  </div>
+                  <button onClick={signOut} className="py-3 text-base text-left text-foreground hover:text-gold transition inline-flex items-center gap-2">
+                    <LogOut size={16} /> Sign out
+                  </button>
+                </>
+              ) : (
+                <Link to="/auth" search={{ redirect: "/cart", mode: "signin" }} className="py-3 text-base text-gold hover:underline inline-flex items-center gap-2">
+                  <LogIn size={16} /> Sign in / Create account
+                </Link>
+              )}
             </nav>
           </div>
         )}
