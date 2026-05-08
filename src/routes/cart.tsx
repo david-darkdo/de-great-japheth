@@ -152,9 +152,11 @@ function CartPage() {
                 href={waUrl}
                 target="_blank"
                 rel="noreferrer"
+                onClick={handleSend}
                 className="btn-gold w-full mt-5 animate-[glow-pulse_2.4s_ease-in-out_infinite]"
               >
-                <MessageCircle size={16} /> Send Selection on WhatsApp
+                <MessageCircle size={16} />
+                {authed === false ? "Login to Send on WhatsApp" : "Send Selection on WhatsApp"}
               </a>
             </div>
           </>
