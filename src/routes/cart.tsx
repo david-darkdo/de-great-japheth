@@ -32,9 +32,34 @@ function buildNarrative(items: ReturnType<typeof useCart>) {
 
 function CartPage() {
   const items = useCart();
+  const navigate = useNavigate();
   const total = items.reduce((s, x) => s + (x.price ?? 0) * x.qty, 0);
+  const [authed, setAuthed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => setAuthed(!!sess));
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const waUrl = `https://wa.me/${WA}?text=${encodeURIComponent(buildNarrative(items))}`;
+
+  const handleSend = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (authed) {
+      // Log activity
+      const { data: u } = await supabase.auth.getUser();
+      if (u?.user) {
+        await supabase.from("activity_logs").insert({
+          action: "whatsapp_send",
+          user_email: u.user.email ?? null,
+          details: { items: items.map((x) => ({ id: x.id, name: x.product_name, qty: x.qty })) },
+        });
+      }
+      return; // allow default navigation to WhatsApp
+    }
+    e.preventDefault();
+    navigate({ to: "/auth", search: { redirect: "/cart", mode: "signin" } });
+  };
 
   return (
     <SiteLayout>
