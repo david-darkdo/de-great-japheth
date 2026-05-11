@@ -36,8 +36,22 @@ type ActivityLog = {
   details: any;
 };
 type UserRole = { id: string; user_id: string; email: string | null; role: string; created_at: string };
+type Order = {
+  id: string;
+  order_code: string;
+  user_id: string | null;
+  customer_email: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  items: any[];
+  item_count: number;
+  total_estimate: number | null;
+  pdf_path: string | null;
+  whatsapp_status: string;
+  created_at: string;
+};
 
-type Tab = "dashboard" | "products" | "upload" | "customers" | "users" | "analytics";
+type Tab = "dashboard" | "products" | "upload" | "orders" | "customers" | "users" | "analytics";
 type ImageFileSetter = (file: File | null) => void;
 
 const IMAGE_PICKER_ACCEPT = "";
@@ -84,6 +98,7 @@ function AdminDashboard() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
 
   // Auth + role check
@@ -152,12 +167,23 @@ function AdminDashboard() {
     setRoles((data as UserRole[]) || []);
   }, []);
 
+  const loadOrders = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    console.log("[admin] orders:", data?.length, error);
+    setOrders((data as Order[]) || []);
+  }, []);
+
   useEffect(() => {
     if (!authorized) return;
     loadProducts();
     loadCustomers();
     loadLogs();
     loadRoles();
+    loadOrders();
 
     const ch = supabase
       .channel("admin-products")
@@ -165,11 +191,12 @@ function AdminDashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, () => loadCustomers())
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, () => loadLogs())
       .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => loadRoles())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => loadOrders())
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [authorized, loadProducts, loadCustomers, loadLogs, loadRoles]);
+  }, [authorized, loadProducts, loadCustomers, loadLogs, loadRoles, loadOrders]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -206,7 +233,7 @@ function AdminDashboard() {
           </div>
         </div>
         <nav className="max-w-6xl mx-auto px-6 flex gap-2 overflow-x-auto">
-          {(["dashboard", "products", "upload", "customers", "users", "analytics"] as Tab[]).map((t) => (
+          {(["dashboard", "products", "upload", "orders", "customers", "users", "analytics"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -232,6 +259,7 @@ function AdminDashboard() {
           <ProductsTab products={products} onEdit={setEditing} onDelete={deleteProduct} />
         )}
         {tab === "upload" && <UploadTab onDone={loadProducts} />}
+        {tab === "orders" && <OrdersTab orders={orders} />}
         {tab === "customers" && <CustomersTab customers={customers} logs={logs} />}
         {tab === "users" && <UsersTab roles={roles} customers={customers} onChanged={loadRoles} />}
         {tab === "analytics" && <AnalyticsTab logs={logs} />}
@@ -711,3 +739,100 @@ function EditProductModal({
     </div>
   );
 }
+
+function OrdersTab({ orders }: { orders: Order[] }) {
+  const [q, setQ] = useState("");
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  const filtered = orders.filter((o) => {
+    if (!q.trim()) return true;
+    const s = q.trim().toLowerCase();
+    return (
+      o.order_code.toLowerCase().includes(s) ||
+      (o.customer_email || "").toLowerCase().includes(s) ||
+      (o.customer_name || "").toLowerCase().includes(s) ||
+      (o.customer_phone || "").toLowerCase().includes(s)
+    );
+  });
+
+  const downloadPdf = async (order: Order) => {
+    if (!order.pdf_path) { alert("No PDF on file for this order."); return; }
+    setDownloading(order.id);
+    try {
+      const { data, error } = await supabase.storage
+        .from("order-pdfs")
+        .createSignedUrl(order.pdf_path, 60 * 5);
+      if (error || !data?.signedUrl) throw error || new Error("No URL");
+      window.open(data.signedUrl, "_blank");
+    } catch (e: any) {
+      alert("Could not load PDF: " + (e.message || "error"));
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          placeholder="Search by order code (DGJ-XXXXX), email, name, phone…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="flex-1 min-w-[220px] border rounded px-3 py-2 text-sm"
+        />
+        <span className="text-xs text-muted-foreground">{filtered.length} of {orders.length} orders</span>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No orders found.</p>
+      ) : (
+        <ul className="space-y-3">
+          {filtered.map((o) => (
+            <li key={o.id} className="border rounded-lg p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Order Code</p>
+                  <p className="font-mono font-bold text-base">{o.order_code}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {new Date(o.created_at).toLocaleString()} · {o.item_count} item{o.item_count !== 1 ? "s" : ""}
+                    {o.total_estimate ? ` · ₦${Number(o.total_estimate).toLocaleString()}` : ""}
+                  </p>
+                </div>
+                <div className="text-right text-xs">
+                  <p className="font-medium">{o.customer_name || "—"}</p>
+                  <p className="text-muted-foreground">{o.customer_email || "—"}</p>
+                  <p className="text-muted-foreground">{o.customer_phone || "—"}</p>
+                </div>
+              </div>
+
+              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                {(o.items || []).slice(0, 10).map((it: any, i: number) => (
+                  <div key={i} className="shrink-0 w-16 text-center">
+                    <div className="w-16 h-16 rounded bg-muted overflow-hidden border">
+                      {it.product_image ? (
+                        <img src={it.product_image} alt={it.product_name} className="w-full h-full object-cover" />
+                      ) : null}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground truncate mt-1">{it.product_name}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => downloadPdf(o)}
+                  disabled={!o.pdf_path || downloading === o.id}
+                  className="px-3 py-1.5 text-sm border rounded hover:bg-muted disabled:opacity-50"
+                >
+                  {downloading === o.id ? "Loading…" : o.pdf_path ? "View PDF Invoice" : "No PDF"}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+

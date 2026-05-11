@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, MapPin, Phone, Mail, ShoppingBag, LogIn, LogOut, User } from "lucide-react";
+import { Menu, X, MapPin, Phone, Mail, ShoppingBag, LogIn, LogOut, User, History } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -69,14 +69,24 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
               )}
             </Link>
             {userEmail ? (
-              <button
-                onClick={signOut}
-                title={`Sign out (${userEmail})`}
-                className="hidden md:inline-flex p-2 rounded-md text-foreground hover:text-gold transition-colors"
-                aria-label="Sign out"
-              >
-                <LogOut size={18} />
-              </button>
+              <>
+                <Link
+                  to="/orders"
+                  className="hidden md:inline-flex p-2 rounded-md text-foreground hover:text-gold transition-colors"
+                  aria-label="Order history"
+                  title="Order history"
+                >
+                  <History size={18} />
+                </Link>
+                <button
+                  onClick={signOut}
+                  title={`Sign out (${userEmail})`}
+                  className="hidden md:inline-flex p-2 rounded-md text-foreground hover:text-gold transition-colors"
+                  aria-label="Sign out"
+                >
+                  <LogOut size={18} />
+                </button>
+              </>
             ) : (
               <Link
                 to="/auth"
@@ -114,6 +124,9 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                   <div className="py-3 text-xs text-muted-foreground border-b border-border flex items-center gap-2">
                     <User size={14} className="text-gold" /> {userEmail}
                   </div>
+                  <Link to="/orders" className="py-3 text-base text-foreground hover:text-gold transition inline-flex items-center gap-2 border-b border-border">
+                    <History size={16} /> Order history
+                  </Link>
                   <button onClick={signOut} className="py-3 text-base text-left text-foreground hover:text-gold transition inline-flex items-center gap-2">
                     <LogOut size={16} /> Sign out
                   </button>

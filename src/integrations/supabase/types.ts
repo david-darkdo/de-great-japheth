@@ -71,6 +71,51 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          item_count: number
+          items: Json
+          order_code: string
+          pdf_path: string | null
+          total_estimate: number | null
+          user_id: string | null
+          whatsapp_status: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          item_count?: number
+          items?: Json
+          order_code: string
+          pdf_path?: string | null
+          total_estimate?: number | null
+          user_id?: string | null
+          whatsapp_status?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          item_count?: number
+          items?: Json
+          order_code?: string
+          pdf_path?: string | null
+          total_estimate?: number | null
+          user_id?: string | null
+          whatsapp_status?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category: string | null
