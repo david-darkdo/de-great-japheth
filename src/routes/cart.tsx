@@ -23,23 +23,56 @@ function CartPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const waUrl = `https://wa.me/${WA}?text=${encodeURIComponent(buildNarrative(items))}`;
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
-  const handleSend = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (authed) {
-      // Log activity
+  const handleSend = async () => {
+    if (!authed) {
+      navigate({ to: "/auth", search: { redirect: "/cart", mode: "signin" } });
+      return;
+    }
+    if (items.length === 0 || busy) return;
+    setBusy(true);
+    setStatus("Generating PDF invoice…");
+    try {
       const { data: u } = await supabase.auth.getUser();
+      const customer = {
+        full_name: (u?.user?.user_metadata as any)?.full_name ?? null,
+        email: u?.user?.email ?? null,
+        phone: (u?.user?.user_metadata as any)?.phone ?? (u?.user?.phone ?? null),
+      };
+      if (u?.user) {
+        const { data: prof } = await supabase
+          .from("customers")
+          .select("full_name, phone, email")
+          .eq("id", u.user.id)
+          .maybeSingle();
+        if (prof) {
+          customer.full_name = (prof as any).full_name ?? customer.full_name;
+          customer.phone = (prof as any).phone ?? customer.phone;
+          customer.email = (prof as any).email ?? customer.email;
+        }
+      }
+
+      const result = await shareInvoice(items, customer);
+
       if (u?.user) {
         await supabase.from("activity_logs").insert({
           action: "whatsapp_send",
           user_email: u.user.email ?? null,
-          details: { items: items.map((x) => ({ id: x.id, name: x.product_name, qty: x.qty })) },
+          details: {
+            invoice: result.fileName,
+            shared: result.shared,
+            items: items.map((x) => ({ id: x.id, name: x.product_name, qty: x.qty })),
+          },
         });
       }
-      return; // allow default navigation to WhatsApp
+      setStatus(result.shared ? "Invoice shared to WhatsApp." : "Invoice downloaded — attach it in the WhatsApp chat that just opened.");
+    } catch (err: any) {
+      setStatus(err?.message || "Could not generate invoice.");
+    } finally {
+      setBusy(false);
     }
-    e.preventDefault();
-    navigate({ to: "/auth", search: { redirect: "/cart", mode: "signin" } });
   };
 
   return (
