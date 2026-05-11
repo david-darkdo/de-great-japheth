@@ -36,8 +36,22 @@ type ActivityLog = {
   details: any;
 };
 type UserRole = { id: string; user_id: string; email: string | null; role: string; created_at: string };
+type Order = {
+  id: string;
+  order_code: string;
+  user_id: string | null;
+  customer_email: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+  items: any[];
+  item_count: number;
+  total_estimate: number | null;
+  pdf_path: string | null;
+  whatsapp_status: string;
+  created_at: string;
+};
 
-type Tab = "dashboard" | "products" | "upload" | "customers" | "users" | "analytics";
+type Tab = "dashboard" | "products" | "upload" | "orders" | "customers" | "users" | "analytics";
 type ImageFileSetter = (file: File | null) => void;
 
 const IMAGE_PICKER_ACCEPT = "";
@@ -84,6 +98,7 @@ function AdminDashboard() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
 
   // Auth + role check
@@ -152,12 +167,23 @@ function AdminDashboard() {
     setRoles((data as UserRole[]) || []);
   }, []);
 
+  const loadOrders = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    console.log("[admin] orders:", data?.length, error);
+    setOrders((data as Order[]) || []);
+  }, []);
+
   useEffect(() => {
     if (!authorized) return;
     loadProducts();
     loadCustomers();
     loadLogs();
     loadRoles();
+    loadOrders();
 
     const ch = supabase
       .channel("admin-products")
@@ -165,11 +191,12 @@ function AdminDashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, () => loadCustomers())
       .on("postgres_changes", { event: "*", schema: "public", table: "activity_logs" }, () => loadLogs())
       .on("postgres_changes", { event: "*", schema: "public", table: "user_roles" }, () => loadRoles())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => loadOrders())
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [authorized, loadProducts, loadCustomers, loadLogs, loadRoles]);
+  }, [authorized, loadProducts, loadCustomers, loadLogs, loadRoles, loadOrders]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
