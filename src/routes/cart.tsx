@@ -1,34 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Trash2, Minus, Plus, MessageCircle, ShoppingBag, ArrowLeft } from "lucide-react";
+import { Trash2, Minus, Plus, MessageCircle, ShoppingBag, ArrowLeft, FileText, Loader2 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { cart, useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
+import { shareInvoice } from "@/lib/invoice";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAPHETH" }] }),
   component: CartPage,
 });
-
-const WA = "2347066786626";
-
-function buildNarrative(items: ReturnType<typeof useCart>) {
-  const lines: string[] = [];
-  lines.push("Hello DE GREAT JAPHETH 👋");
-  lines.push("I'd like to enquire about the following items from your showroom:");
-  lines.push("");
-  items.forEach((it, i) => {
-    const code = it.item_code ? ` (Code: ${it.item_code})` : "";
-    const cat = it.category ? ` — ${it.category}` : "";
-    const price = it.price != null ? ` — ₦${Number(it.price).toLocaleString()}` : "";
-    lines.push(`${i + 1}. ${it.product_name}${cat}${code}`);
-    lines.push(`   Quantity: ${it.qty}${price}`);
-    if (it.product_image) lines.push(`   Image: ${it.product_image}`);
-    lines.push("");
-  });
-  lines.push("Please confirm availability, total price and delivery options. Thank you.");
-  return lines.join("\n");
-}
 
 function CartPage() {
   const items = useCart();
