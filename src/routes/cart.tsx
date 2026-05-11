@@ -160,18 +160,23 @@ function CartPage() {
                 </div>
               )}
               <p className="mt-3 text-xs text-muted-foreground">
-                Final price confirmed on WhatsApp. We'll send the full list with names and images of each item.
+                We'll generate a professional PDF invoice with product photos, then open WhatsApp so you can share it.
               </p>
-              <a
-                href={waUrl}
-                target="_blank"
-                rel="noreferrer"
+              <button
                 onClick={handleSend}
-                className="btn-gold w-full mt-5 animate-[glow-pulse_2.4s_ease-in-out_infinite]"
+                disabled={busy}
+                className="btn-gold w-full mt-5 animate-[glow-pulse_2.4s_ease-in-out_infinite] disabled:opacity-70"
               >
-                <MessageCircle size={16} />
-                {authed === false ? "Login to Send on WhatsApp" : "Send Selection on WhatsApp"}
-              </a>
+                {busy ? <Loader2 className="animate-spin" size={16} /> : authed === false ? <MessageCircle size={16} /> : <FileText size={16} />}
+                {busy
+                  ? "Preparing invoice…"
+                  : authed === false
+                    ? "Login to Generate Invoice"
+                    : "Generate PDF & Share on WhatsApp"}
+              </button>
+              {status && (
+                <p className="mt-3 text-xs text-center text-muted-foreground">{status}</p>
+              )}
             </div>
           </>
         )}
