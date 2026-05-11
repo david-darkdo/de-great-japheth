@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Trash2, Minus, Plus, MessageCircle, ShoppingBag, ArrowLeft } from "lucide-react";
+import { Trash2, Minus, Plus, MessageCircle, ShoppingBag, ArrowLeft, History, Loader2 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { cart, useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,21 +12,24 @@ export const Route = createFileRoute("/cart")({
 
 const WA = "2347066786626";
 
-function buildNarrative(items: ReturnType<typeof useCart>) {
+function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
   const lines: string[] = [];
   lines.push("Hello DE GREAT JAPHETH 👋");
-  lines.push("I'd like to enquire about the following items from your showroom:");
   lines.push("");
+  lines.push("I'd like to make an inquiry about the items below from your showroom.");
+  lines.push("Please verify availability and help me finalize the best options.");
+  lines.push("");
+  lines.push(`Order Code: ${orderCode}`);
+  lines.push("");
+  lines.push("Selected Items:");
   items.forEach((it, i) => {
     const code = it.item_code ? ` (Code: ${it.item_code})` : "";
     const cat = it.category ? ` — ${it.category}` : "";
     const price = it.price != null ? ` — ₦${Number(it.price).toLocaleString()}` : "";
-    lines.push(`${i + 1}. ${it.product_name}${cat}${code}`);
-    lines.push(`   Quantity: ${it.qty}${price}`);
-    if (it.product_image) lines.push(`   Image: ${it.product_image}`);
-    lines.push("");
+    lines.push(`${i + 1}. ${it.product_name}${cat}${code} × ${it.qty}${price}`);
   });
-  lines.push("Please confirm availability, total price and delivery options. Thank you.");
+  lines.push("");
+  lines.push("Thank you — looking forward to your response.");
   return lines.join("\n");
 }
 
@@ -35,6 +38,8 @@ function CartPage() {
   const navigate = useNavigate();
   const total = items.reduce((s, x) => s + (x.price ?? 0) * x.qty, 0);
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [preparing, setPreparing] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session));
@@ -42,31 +47,53 @@ function CartPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const waUrl = `https://wa.me/${WA}?text=${encodeURIComponent(buildNarrative(items))}`;
-
-  const handleSend = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (authed) {
-      // Log activity
-      const { data: u } = await supabase.auth.getUser();
-      if (u?.user) {
-        await supabase.from("activity_logs").insert({
-          action: "whatsapp_send",
-          user_email: u.user.email ?? null,
-          details: { items: items.map((x) => ({ id: x.id, name: x.product_name, qty: x.qty })) },
-        });
-      }
-      return; // allow default navigation to WhatsApp
+  const handleSend = async () => {
+    if (items.length === 0) return;
+    if (!authed) {
+      navigate({ to: "/auth", search: { redirect: "/cart", mode: "signin" } });
+      return;
     }
-    e.preventDefault();
-    navigate({ to: "/auth", search: { redirect: "/cart", mode: "signin" } });
+    setErrMsg("");
+    setPreparing(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("Session expired. Please sign in again.");
+
+      const res = await fetch("/api/orders/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ items }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.order_code) throw new Error(json.error || "Could not prepare order");
+
+      const message = buildNarrative(items, json.order_code);
+      const url = `https://wa.me/${WA}?text=${encodeURIComponent(message)}`;
+      cart.clear();
+      window.location.href = url;
+    } catch (err: any) {
+      setErrMsg(err.message || "Something went wrong");
+      setPreparing(false);
+    }
   };
 
   return (
     <SiteLayout>
       <div className="max-w-5xl mx-auto px-4 py-8 md:py-12">
-        <Link to="/showroom" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-gold transition">
-          <ArrowLeft size={14} /> Continue browsing
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link to="/showroom" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-gold transition">
+            <ArrowLeft size={14} /> Continue browsing
+          </Link>
+          {authed && (
+            <Link to="/orders" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-gold transition">
+              <History size={14} /> Order history
+            </Link>
+          )}
+        </div>
         <div className="mt-3 flex items-end justify-between">
           <div>
             <p className="text-xs tracking-[0.3em] text-gold uppercase mb-2">Your Selection</p>
@@ -133,7 +160,6 @@ function CartPage() {
               ))}
             </ul>
 
-            {/* Summary */}
             <div className="mt-6 glass rounded-xl p-5 md:p-6">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Items</span>
@@ -148,20 +174,33 @@ function CartPage() {
               <p className="mt-3 text-xs text-muted-foreground">
                 Final price confirmed on WhatsApp. We'll send the full list with names and images of each item.
               </p>
-              <a
-                href={waUrl}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
                 onClick={handleSend}
-                className="btn-gold w-full mt-5 animate-[glow-pulse_2.4s_ease-in-out_infinite]"
+                disabled={preparing}
+                className="btn-gold w-full mt-5 animate-[glow-pulse_2.4s_ease-in-out_infinite] disabled:opacity-70"
               >
-                <MessageCircle size={16} />
-                {authed === false ? "Login to Send on WhatsApp" : "Send Selection on WhatsApp"}
-              </a>
+                {preparing ? (
+                  <><Loader2 size={16} className="animate-spin" /> Preparing your order…</>
+                ) : (
+                  <><MessageCircle size={16} /> {authed === false ? "Login to Push to WhatsApp" : "Push to WhatsApp"}</>
+                )}
+              </button>
+              {errMsg && <p className="mt-2 text-xs text-destructive text-center">{errMsg}</p>}
             </div>
           </>
         )}
       </div>
+
+      {preparing && (
+        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center animate-[fade-in_.2s_ease-out_both]">
+          <div className="glass rounded-2xl px-8 py-7 text-center max-w-xs">
+            <Loader2 className="mx-auto text-gold animate-spin" size={36} />
+            <p className="mt-4 font-display text-lg text-shimmer">Preparing your order…</p>
+            <p className="mt-1 text-xs text-muted-foreground">Opening WhatsApp in a moment</p>
+          </div>
+        </div>
+      )}
     </SiteLayout>
   );
 }
