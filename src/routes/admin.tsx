@@ -233,7 +233,7 @@ function AdminDashboard() {
           </div>
         </div>
         <nav className="max-w-6xl mx-auto px-6 flex gap-2 overflow-x-auto">
-          {(["dashboard", "products", "upload", "customers", "users", "analytics"] as Tab[]).map((t) => (
+          {(["dashboard", "products", "upload", "orders", "customers", "users", "analytics"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
