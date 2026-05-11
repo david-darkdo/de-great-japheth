@@ -1,34 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Trash2, Minus, Plus, MessageCircle, ShoppingBag, ArrowLeft } from "lucide-react";
+import { Trash2, Minus, Plus, MessageCircle, ShoppingBag, ArrowLeft, FileText, Loader2 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { cart, useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
+import { shareInvoice } from "@/lib/invoice";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAPHETH" }] }),
   component: CartPage,
 });
-
-const WA = "2347066786626";
-
-function buildNarrative(items: ReturnType<typeof useCart>) {
-  const lines: string[] = [];
-  lines.push("Hello DE GREAT JAPHETH 👋");
-  lines.push("I'd like to enquire about the following items from your showroom:");
-  lines.push("");
-  items.forEach((it, i) => {
-    const code = it.item_code ? ` (Code: ${it.item_code})` : "";
-    const cat = it.category ? ` — ${it.category}` : "";
-    const price = it.price != null ? ` — ₦${Number(it.price).toLocaleString()}` : "";
-    lines.push(`${i + 1}. ${it.product_name}${cat}${code}`);
-    lines.push(`   Quantity: ${it.qty}${price}`);
-    if (it.product_image) lines.push(`   Image: ${it.product_image}`);
-    lines.push("");
-  });
-  lines.push("Please confirm availability, total price and delivery options. Thank you.");
-  return lines.join("\n");
-}
 
 function CartPage() {
   const items = useCart();
@@ -42,23 +23,56 @@ function CartPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const waUrl = `https://wa.me/${WA}?text=${encodeURIComponent(buildNarrative(items))}`;
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
-  const handleSend = async (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (authed) {
-      // Log activity
+  const handleSend = async () => {
+    if (!authed) {
+      navigate({ to: "/auth", search: { redirect: "/cart", mode: "signin" } });
+      return;
+    }
+    if (items.length === 0 || busy) return;
+    setBusy(true);
+    setStatus("Generating PDF invoice…");
+    try {
       const { data: u } = await supabase.auth.getUser();
+      const customer = {
+        full_name: (u?.user?.user_metadata as any)?.full_name ?? null,
+        email: u?.user?.email ?? null,
+        phone: (u?.user?.user_metadata as any)?.phone ?? (u?.user?.phone ?? null),
+      };
+      if (u?.user) {
+        const { data: prof } = await supabase
+          .from("customers")
+          .select("full_name, phone, email")
+          .eq("id", u.user.id)
+          .maybeSingle();
+        if (prof) {
+          customer.full_name = (prof as any).full_name ?? customer.full_name;
+          customer.phone = (prof as any).phone ?? customer.phone;
+          customer.email = (prof as any).email ?? customer.email;
+        }
+      }
+
+      const result = await shareInvoice(items, customer);
+
       if (u?.user) {
         await supabase.from("activity_logs").insert({
           action: "whatsapp_send",
           user_email: u.user.email ?? null,
-          details: { items: items.map((x) => ({ id: x.id, name: x.product_name, qty: x.qty })) },
+          details: {
+            invoice: result.fileName,
+            shared: result.shared,
+            items: items.map((x) => ({ id: x.id, name: x.product_name, qty: x.qty })),
+          },
         });
       }
-      return; // allow default navigation to WhatsApp
+      setStatus(result.shared ? "Invoice shared to WhatsApp." : "Invoice downloaded — attach it in the WhatsApp chat that just opened.");
+    } catch (err: any) {
+      setStatus(err?.message || "Could not generate invoice.");
+    } finally {
+      setBusy(false);
     }
-    e.preventDefault();
-    navigate({ to: "/auth", search: { redirect: "/cart", mode: "signin" } });
   };
 
   return (
@@ -146,18 +160,23 @@ function CartPage() {
                 </div>
               )}
               <p className="mt-3 text-xs text-muted-foreground">
-                Final price confirmed on WhatsApp. We'll send the full list with names and images of each item.
+                We'll generate a professional PDF invoice with product photos, then open WhatsApp so you can share it.
               </p>
-              <a
-                href={waUrl}
-                target="_blank"
-                rel="noreferrer"
+              <button
                 onClick={handleSend}
-                className="btn-gold w-full mt-5 animate-[glow-pulse_2.4s_ease-in-out_infinite]"
+                disabled={busy}
+                className="btn-gold w-full mt-5 animate-[glow-pulse_2.4s_ease-in-out_infinite] disabled:opacity-70"
               >
-                <MessageCircle size={16} />
-                {authed === false ? "Login to Send on WhatsApp" : "Send Selection on WhatsApp"}
-              </a>
+                {busy ? <Loader2 className="animate-spin" size={16} /> : authed === false ? <MessageCircle size={16} /> : <FileText size={16} />}
+                {busy
+                  ? "Preparing invoice…"
+                  : authed === false
+                    ? "Login to Generate Invoice"
+                    : "Generate PDF & Share on WhatsApp"}
+              </button>
+              {status && (
+                <p className="mt-3 text-xs text-center text-muted-foreground">{status}</p>
+              )}
             </div>
           </>
         )}
