@@ -39,16 +39,18 @@ function ProductPage() {
       .eq("id", id)
       .maybeSingle()
       .then(({ data }) => {
-        setProduct(data as Product | null);
+        const prod = data as Product | null;
+        setProduct(prod);
         setLoading(false);
-        if (data?.category) {
-          supabase
+        if (prod?.category) {
+          // Prefer same family within the category. If no family set, fall back to category.
+          let q = supabase
             .from("products")
-            .select("id, product_name, category, product_type, product_image, price")
-            .eq("category", data.category)
-            .neq("id", id)
-            .limit(4)
-            .then(({ data: r }) => setRelated((r as Product[]) || []));
+            .select("id, product_name, category, product_type, product_image, price, family")
+            .eq("category", prod.category)
+            .neq("id", id);
+          if (prod.family) q = q.eq("family", prod.family);
+          q.order("created_at", { ascending: false }).then(({ data: r }) => setRelated((r as Product[]) || []));
         }
       });
   }, [id]);
