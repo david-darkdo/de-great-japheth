@@ -86,18 +86,28 @@ function OrdersPage() {
                       ) : null}
                     </div>
                   </div>
-                  <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                    {(o.items || []).slice(0, 8).map((it: any, i: number) => (
-                      <div key={i} className="shrink-0 w-16 text-center">
-                        <div className="w-16 h-16 rounded-md overflow-hidden bg-muted border border-border">
+                  <ul className="mt-3 space-y-3">
+                    {(o.items || []).map((it: any, i: number) => (
+                      <li key={i} className="flex gap-3 items-start">
+                        <div className="w-16 h-16 rounded-md overflow-hidden bg-muted border border-border shrink-0">
                           {it.product_image ? (
                             <img src={it.product_image} alt={it.product_name} className="w-full h-full object-cover" />
                           ) : null}
                         </div>
-                        <p className="mt-1 text-[10px] text-muted-foreground truncate">{it.product_name}</p>
-                      </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{it.product_name}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {it.category}{it.item_code ? ` · ${it.item_code}` : ""} · Qty {it.qty}
+                          </p>
+                          {it.note && (
+                            <p className="mt-1 text-xs text-foreground/80 italic border-l-2 border-gold/40 pl-2">
+                              "{it.note}"
+                            </p>
+                          )}
+                        </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                   <a
                     href={waUrl}
                     target="_blank"
