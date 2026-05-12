@@ -14,22 +14,22 @@ const WA = "2347066786626";
 
 function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
   const lines: string[] = [];
-  lines.push("Hello DE GREAT JAPHETH 👋");
+  lines.push("Hello DE GREAT JAFFET 👋");
   lines.push("");
-  lines.push("I'd like to make an inquiry about the items below from your showroom.");
-  lines.push("Please verify availability and help me finalize the best options.");
+  lines.push(`ORDER CODE: ${orderCode}`);
   lines.push("");
-  lines.push(`Order Code: ${orderCode}`);
+  lines.push("Selected Products:");
   lines.push("");
-  lines.push("Selected Items:");
   items.forEach((it, i) => {
     const code = it.item_code ? ` (Code: ${it.item_code})` : "";
     const cat = it.category ? ` — ${it.category}` : "";
     const price = it.price != null ? ` — ₦${Number(it.price).toLocaleString()}` : "";
-    lines.push(`${i + 1}. ${it.product_name}${cat}${code} × ${it.qty}${price}`);
+    lines.push(`${i + 1}. ${it.product_name}${cat}${code}${price}`);
+    const note = (it.note || "").trim();
+    if (note) lines.push(`   Request: ${note}`);
+    lines.push("");
   });
-  lines.push("");
-  lines.push("Thank you — looking forward to your response.");
+  lines.push("Please confirm availability and assist me with pricing and delivery.");
   return lines.join("\n");
 }
 
