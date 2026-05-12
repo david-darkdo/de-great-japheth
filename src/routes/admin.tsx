@@ -327,7 +327,9 @@ function ProductsTab({
           )}
           <div className="p-3 space-y-1">
             <h3 className="font-medium truncate">{p.product_name}</h3>
-            <p className="text-xs text-muted-foreground">{p.category || "—"}</p>
+            <p className="text-xs text-muted-foreground">
+              {p.category || "—"}{p.family ? ` · ${p.family}` : ""}
+            </p>
             <p className="text-sm">{p.price != null ? `$${Number(p.price).toFixed(2)}` : "—"}</p>
             <div className="flex gap-2 pt-2">
               <button onClick={() => onEdit(p)} className="flex-1 border rounded py-1 text-sm">Edit</button>
