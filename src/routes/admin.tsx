@@ -720,6 +720,8 @@ function EditProductModal({
           <option value="">— Category —</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
+        <input className="w-full border rounded px-3 py-2" placeholder="Family (e.g. 60x60, Turkish Luxury)"
+          value={family} onChange={(e) => setFamily(e.target.value)} />
         <input className="w-full border rounded px-3 py-2" type="number" step="0.01" placeholder="Price" value={price}
           onChange={(e) => setPrice(e.target.value)} />
         {(file ? URL.createObjectURL(file) : imageUrl) && (
