@@ -20,6 +20,7 @@ type Product = {
   finished_image: string | null;
   full_details: string | null;
   price: number | null;
+  family?: string | null;
 };
 
 function ProductPage() {
