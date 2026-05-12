@@ -6,7 +6,7 @@ import { cart, useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/cart")({
-  head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAPHETH" }] }),
+  head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAFFET" }] }),
   component: CartPage,
 });
 
