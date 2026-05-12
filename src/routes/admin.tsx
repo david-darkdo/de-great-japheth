@@ -821,18 +821,28 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 </div>
               </div>
 
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                {(o.items || []).slice(0, 10).map((it: any, i: number) => (
-                  <div key={i} className="shrink-0 w-16 text-center">
-                    <div className="w-16 h-16 rounded bg-muted overflow-hidden border">
+              <ul className="mt-3 space-y-2">
+                {(o.items || []).map((it: any, i: number) => (
+                  <li key={i} className="flex gap-3 items-start border-t pt-2 first:border-t-0 first:pt-0">
+                    <div className="w-14 h-14 rounded bg-muted overflow-hidden border shrink-0">
                       {it.product_image ? (
                         <img src={it.product_image} alt={it.product_name} className="w-full h-full object-cover" />
                       ) : null}
                     </div>
-                    <p className="text-[10px] text-muted-foreground truncate mt-1">{it.product_name}</p>
-                  </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{it.product_name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {it.category}{it.item_code ? ` · ${it.item_code}` : ""} · Qty {it.qty}
+                      </p>
+                      {it.note && (
+                        <p className="mt-1 text-xs italic border-l-2 border-primary/50 pl-2 text-foreground/80">
+                          {it.note}
+                        </p>
+                      )}
+                    </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
 
               <div className="mt-3 flex gap-2">
                 <button
