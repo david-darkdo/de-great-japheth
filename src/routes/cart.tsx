@@ -162,6 +162,13 @@ function CartPage() {
                         <Trash2 size={13} /> Remove
                       </button>
                     </div>
+                    <textarea
+                      value={it.note ?? ""}
+                      onChange={(e) => cart.setNote(it.id, e.target.value)}
+                      rows={2}
+                      placeholder="Enter quantity, size, installation request, or custom details..."
+                      className="mt-3 w-full rounded-md border border-border bg-background/40 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-gold transition resize-y"
+                    />
                   </div>
                 </li>
               ))}
