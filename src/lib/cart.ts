@@ -43,6 +43,10 @@ export const cart = {
     items = items.map((x) => (x.id === id ? { ...x, qty: Math.max(1, qty) } : x));
     persist();
   },
+  setNote(id: string, note: string) {
+    items = items.map((x) => (x.id === id ? { ...x, note } : x));
+    persist();
+  },
   remove(id: string) {
     items = items.filter((x) => x.id !== id);
     persist();
