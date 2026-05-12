@@ -668,6 +668,7 @@ function EditProductModal({
 }) {
   const [name, setName] = useState(product.product_name);
   const [category, setCategory] = useState(product.category || "");
+  const [family, setFamily] = useState(product.family || "");
   const [price, setPrice] = useState(product.price?.toString() || "");
   const [imageUrl, setImageUrl] = useState(product.product_image || "");
   const [file, setFile] = useState<File | null>(null);
