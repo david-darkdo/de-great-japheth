@@ -74,7 +74,14 @@ function CartPage() {
       const message = buildNarrative(items, json.order_code);
       const url = `https://wa.me/${WA}?text=${encodeURIComponent(message)}`;
       cart.clear();
-      window.location.href = url;
+      // Open in a new tab so the preview iframe / current page isn't navigated away to a blank state.
+      const win = window.open(url, "_blank", "noopener,noreferrer");
+      if (!win) {
+        // Popup blocked — fall back to top-level navigation (escapes iframes).
+        try { (window.top ?? window).location.href = url; }
+        catch { window.location.href = url; }
+      }
+      setPreparing(false);
     } catch (err: any) {
       setErrMsg(err.message || "Something went wrong");
       setPreparing(false);
