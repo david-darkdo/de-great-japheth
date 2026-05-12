@@ -11,7 +11,25 @@ type Item = {
   product_image?: string | null;
   price?: number | null;
   qty: number;
+  note?: string | null;
 };
+
+function wrapText(text: string, font: any, size: number, maxWidth: number): string[] {
+  const words = (text || "").split(/\s+/);
+  const lines: string[] = [];
+  let line = "";
+  for (const w of words) {
+    const test = line ? line + " " + w : w;
+    if (font.widthOfTextAtSize(test, size) > maxWidth) {
+      if (line) lines.push(line);
+      line = w;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
 
 function generateOrderCode() {
   const n = Math.floor(10000 + Math.random() * 90000);
