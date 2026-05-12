@@ -691,6 +691,7 @@ function EditProductModal({
         .update({
           product_name: name,
           category: category || null,
+          family: family.trim() || null,
           price: price ? Number(price) : null,
           product_image: url || null,
         })
