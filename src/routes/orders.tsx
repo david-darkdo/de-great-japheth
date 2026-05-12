@@ -5,7 +5,7 @@ import { SiteLayout } from "@/components/SiteLayout";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/orders")({
-  head: () => ({ meta: [{ title: "Order History — DE GREAT JAPHETH" }] }),
+  head: () => ({ meta: [{ title: "Order History — DE GREAT JAFFET" }] }),
   component: OrdersPage,
 });
 
@@ -65,7 +65,7 @@ function OrdersPage() {
         ) : (
           <ul className="mt-6 space-y-4">
             {orders.map((o, idx) => {
-              const reorderText = `Hello DE GREAT JAPHETH, I'd like to follow up on my order ${o.order_code}.`;
+              const reorderText = `Hello DE GREAT JAFFET, I'd like to follow up on my order ${o.order_code}.`;
               const waUrl = `https://wa.me/${WA}?text=${encodeURIComponent(reorderText)}`;
               return (
                 <li

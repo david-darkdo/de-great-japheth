@@ -45,7 +45,7 @@ function HomePage() {
         <div className="absolute -bottom-40 -right-40 w-[28rem] h-[28rem] rounded-full bg-[oklch(0.82_0.14_86/0.18)] blur-3xl animate-[float_11s_ease-in-out_infinite]" />
         <div className="relative max-w-7xl mx-auto px-4 py-24 md:py-36">
           <p className="text-xs md:text-sm tracking-[0.4em] text-gold uppercase mb-4 animate-[fade-in_.8s_ease-out_both]">
-            DE GREAT JAPHETH
+            DE GREAT JAFFET
           </p>
           <h1 className="font-display text-5xl md:text-7xl font-bold leading-[1.05] max-w-3xl text-shimmer animate-[fade-up_.8s_ease-out_both]">
             Living Greatfull
