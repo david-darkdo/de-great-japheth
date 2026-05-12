@@ -16,6 +16,7 @@ type Product = {
   item_code?: string | null;
   product_type?: string | null;
   full_details?: string | null;
+  family?: string | null;
 };
 
 type Customer = {
