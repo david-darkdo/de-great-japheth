@@ -92,7 +92,11 @@ async function buildPdf(opts: {
 
   for (let i = 0; i < opts.items.length; i++) {
     const it = opts.items[i];
-    if (y < 140) {
+    const note = (it.note || "").trim();
+    const noteLines = note ? wrapText(`Customer Request: ${note}`, font, 9, width - 40 - (it.product_image ? 125 : 40)) : [];
+    const blockHeight = 80 + noteLines.length * 12;
+
+    if (y - blockHeight < 80) {
       page = pdf.addPage([595, 842]);
       y = height - 60;
     }
@@ -121,7 +125,13 @@ async function buildPdf(opts: {
       page.drawText(`Subtotal: NGN ${(Number(it.price) * it.qty).toLocaleString()}`, { x: tx + 240, y: y - 36, size: 9, font: fontBold, color: gold });
     }
 
-    y -= 90;
+    let cursor = y - 52;
+    for (const ln of noteLines) {
+      page.drawText(ln, { x: tx, y: cursor, size: 9, font, color: dark });
+      cursor -= 12;
+    }
+
+    y -= blockHeight + 10;
     page.drawLine({ start: { x: 40, y: y + 8 }, end: { x: width - 40, y: y + 8 }, thickness: 0.3, color: rgb(0.85, 0.85, 0.85) });
   }
 
