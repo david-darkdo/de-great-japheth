@@ -176,7 +176,14 @@ function ProductPage() {
         {/* 4. Related */}
         {related.length > 0 && (
           <div className="mt-16">
-            <h2 className="font-display text-xl md:text-2xl font-bold text-primary mb-6">Related Products</h2>
+            <h2 className="font-display text-xl md:text-2xl font-bold text-primary mb-2">
+              {product.family ? `More in ${product.family}` : "Related Products"}
+            </h2>
+            <p className="text-xs text-muted-foreground mb-6">
+              {product.family
+                ? `All ${product.family} products in ${product.category}`
+                : `From the ${product.category} collection`}
+            </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {related.map((p) => <ProductCard key={p.id} p={p} />)}
             </div>
