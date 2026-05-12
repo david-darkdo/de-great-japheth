@@ -86,7 +86,7 @@ function HomePage() {
             >
               <div className="relative aspect-square overflow-hidden rounded-xl bg-muted border border-border hover-lift">
                 {(() => {
-                  const src = catImages[cat] || CATEGORY_FALLBACK_IMAGES[cat];
+                  const src = CATEGORY_COVER_IMAGES[cat];
                   return src ? (
                     <img
                       src={src}
