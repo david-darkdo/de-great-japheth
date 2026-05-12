@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, ShoppingBag, ListChecks, MessageCircle, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
@@ -10,7 +10,8 @@ import catElectrical from "@/assets/cat-electrical.png";
 import catPlumbing from "@/assets/cat-plumbing.png";
 import catCeiling from "@/assets/cat-ceiling.png";
 
-const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+// Static homepage category covers — never auto-replaced by uploads.
+const CATEGORY_COVER_IMAGES: Record<string, string> = {
   "Security Doors": catSecurityDoors,
   "Electrical": catElectrical,
   "Plumbing": catPlumbing,
@@ -20,39 +21,14 @@ const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DE GREAT JAPHETH — Living Greatfull" },
+      { title: "DE GREAT JAFFET — Living Greatfull" },
       { name: "description", content: "We supply and install high-quality building materials for modern interiors and construction finishing." },
     ],
   }),
   component: HomePage,
 });
 
-type Product = {
-  id: string;
-  product_name: string;
-  category: string | null;
-  product_image: string | null;
-};
-
 function HomePage() {
-  const [catImages, setCatImages] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    supabase
-      .from("products")
-      .select("id, product_name, category, product_image")
-      .in("category", HOME_CATEGORIES as unknown as string[])
-      .then(({ data }) => {
-        const map: Record<string, string> = {};
-        ((data as Product[]) || []).forEach((p) => {
-          if (p.category && p.product_image && !map[p.category]) {
-            map[p.category] = p.product_image;
-          }
-        });
-        setCatImages(map);
-      });
-  }, []);
-
   return (
     <SiteLayout>
       {/* Hero */}
@@ -69,7 +45,7 @@ function HomePage() {
         <div className="absolute -bottom-40 -right-40 w-[28rem] h-[28rem] rounded-full bg-[oklch(0.82_0.14_86/0.18)] blur-3xl animate-[float_11s_ease-in-out_infinite]" />
         <div className="relative max-w-7xl mx-auto px-4 py-24 md:py-36">
           <p className="text-xs md:text-sm tracking-[0.4em] text-gold uppercase mb-4 animate-[fade-in_.8s_ease-out_both]">
-            DE GREAT JAPHETH
+            DE GREAT JAFFET
           </p>
           <h1 className="font-display text-5xl md:text-7xl font-bold leading-[1.05] max-w-3xl text-shimmer animate-[fade-up_.8s_ease-out_both]">
             Living Greatfull
@@ -110,7 +86,7 @@ function HomePage() {
             >
               <div className="relative aspect-square overflow-hidden rounded-xl bg-muted border border-border hover-lift">
                 {(() => {
-                  const src = catImages[cat] || CATEGORY_FALLBACK_IMAGES[cat];
+                  const src = CATEGORY_COVER_IMAGES[cat];
                   return src ? (
                     <img
                       src={src}

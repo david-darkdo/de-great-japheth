@@ -16,6 +16,7 @@ type Product = {
   item_code?: string | null;
   product_type?: string | null;
   full_details?: string | null;
+  family?: string | null;
 };
 
 type Customer = {
@@ -326,7 +327,9 @@ function ProductsTab({
           )}
           <div className="p-3 space-y-1">
             <h3 className="font-medium truncate">{p.product_name}</h3>
-            <p className="text-xs text-muted-foreground">{p.category || "—"}</p>
+            <p className="text-xs text-muted-foreground">
+              {p.category || "—"}{p.family ? ` · ${p.family}` : ""}
+            </p>
             <p className="text-sm">{p.price != null ? `$${Number(p.price).toFixed(2)}` : "—"}</p>
             <div className="flex gap-2 pt-2">
               <button onClick={() => onEdit(p)} className="flex-1 border rounded py-1 text-sm">Edit</button>
@@ -358,6 +361,7 @@ async function uploadImage(file: File): Promise<string> {
 function UploadTab({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
+  const [family, setFamily] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [initialFile, setInitialFile] = useState<File | null>(null);
@@ -403,6 +407,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
         .insert({
           product_name: name,
           category: category || null,
+          family: family.trim() || null,
           price: price ? Number(price) : null,
           product_image: productImageUrl,
           finished_image: finishedImageUrl,
@@ -413,7 +418,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
       if (error) throw error;
       console.log("[upload] saved:", data);
       setStatus("✓ Uploaded");
-      setName(""); setCategory(""); setPrice(""); setDescription("");
+      setName(""); setCategory(""); setFamily(""); setPrice(""); setDescription("");
       setInitialFile(null); setFinishedFile(null);
       if (initRef.current) initRef.current.value = "";
       if (finRef.current) finRef.current.value = "";
@@ -442,6 +447,12 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           <option key={c} value={c}>{c}</option>
         ))}
       </select>
+      <div>
+        <input type="text" placeholder="Product Family (e.g. 60x60, Turkish Luxury, Premium Marble)" value={family}
+          onChange={(e) => setFamily(e.target.value)}
+          className="w-full border rounded px-3 py-2" />
+        <p className="text-[11px] text-muted-foreground mt-1">Optional. Groups related products inside the same category.</p>
+      </div>
       <input type="number" step="0.01" placeholder="Price" value={price}
         onChange={(e) => setPrice(e.target.value)}
         className="w-full border rounded px-3 py-2" />
@@ -659,6 +670,7 @@ function EditProductModal({
 }) {
   const [name, setName] = useState(product.product_name);
   const [category, setCategory] = useState(product.category || "");
+  const [family, setFamily] = useState(product.family || "");
   const [price, setPrice] = useState(product.price?.toString() || "");
   const [imageUrl, setImageUrl] = useState(product.product_image || "");
   const [file, setFile] = useState<File | null>(null);
@@ -681,6 +693,7 @@ function EditProductModal({
         .update({
           product_name: name,
           category: category || null,
+          family: family.trim() || null,
           price: price ? Number(price) : null,
           product_image: url || null,
         })
@@ -709,6 +722,8 @@ function EditProductModal({
           <option value="">— Category —</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
+        <input className="w-full border rounded px-3 py-2" placeholder="Family (e.g. 60x60, Turkish Luxury)"
+          value={family} onChange={(e) => setFamily(e.target.value)} />
         <input className="w-full border rounded px-3 py-2" type="number" step="0.01" placeholder="Price" value={price}
           onChange={(e) => setPrice(e.target.value)} />
         {(file ? URL.createObjectURL(file) : imageUrl) && (
@@ -806,18 +821,28 @@ function OrdersTab({ orders }: { orders: Order[] }) {
                 </div>
               </div>
 
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                {(o.items || []).slice(0, 10).map((it: any, i: number) => (
-                  <div key={i} className="shrink-0 w-16 text-center">
-                    <div className="w-16 h-16 rounded bg-muted overflow-hidden border">
+              <ul className="mt-3 space-y-2">
+                {(o.items || []).map((it: any, i: number) => (
+                  <li key={i} className="flex gap-3 items-start border-t pt-2 first:border-t-0 first:pt-0">
+                    <div className="w-14 h-14 rounded bg-muted overflow-hidden border shrink-0">
                       {it.product_image ? (
                         <img src={it.product_image} alt={it.product_name} className="w-full h-full object-cover" />
                       ) : null}
                     </div>
-                    <p className="text-[10px] text-muted-foreground truncate mt-1">{it.product_name}</p>
-                  </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{it.product_name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {it.category}{it.item_code ? ` · ${it.item_code}` : ""} · Qty {it.qty}
+                      </p>
+                      {it.note && (
+                        <p className="mt-1 text-xs italic border-l-2 border-primary/50 pl-2 text-foreground/80">
+                          {it.note}
+                        </p>
+                      )}
+                    </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
 
               <div className="mt-3 flex gap-2">
                 <button

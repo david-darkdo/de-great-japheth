@@ -6,7 +6,7 @@ import { cart, useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/cart")({
-  head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAPHETH" }] }),
+  head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAFFET" }] }),
   component: CartPage,
 });
 
@@ -14,22 +14,22 @@ const WA = "2347066786626";
 
 function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
   const lines: string[] = [];
-  lines.push("Hello DE GREAT JAPHETH 👋");
+  lines.push("Hello DE GREAT JAFFET 👋");
   lines.push("");
-  lines.push("I'd like to make an inquiry about the items below from your showroom.");
-  lines.push("Please verify availability and help me finalize the best options.");
+  lines.push(`ORDER CODE: ${orderCode}`);
   lines.push("");
-  lines.push(`Order Code: ${orderCode}`);
+  lines.push("Selected Products:");
   lines.push("");
-  lines.push("Selected Items:");
   items.forEach((it, i) => {
     const code = it.item_code ? ` (Code: ${it.item_code})` : "";
     const cat = it.category ? ` — ${it.category}` : "";
     const price = it.price != null ? ` — ₦${Number(it.price).toLocaleString()}` : "";
-    lines.push(`${i + 1}. ${it.product_name}${cat}${code} × ${it.qty}${price}`);
+    lines.push(`${i + 1}. ${it.product_name}${cat}${code}${price}`);
+    const note = (it.note || "").trim();
+    if (note) lines.push(`   Request: ${note}`);
+    lines.push("");
   });
-  lines.push("");
-  lines.push("Thank you — looking forward to your response.");
+  lines.push("Please confirm availability and assist me with pricing and delivery.");
   return lines.join("\n");
 }
 
@@ -162,6 +162,13 @@ function CartPage() {
                         <Trash2 size={13} /> Remove
                       </button>
                     </div>
+                    <textarea
+                      value={it.note ?? ""}
+                      onChange={(e) => cart.setNote(it.id, e.target.value)}
+                      rows={2}
+                      placeholder="Enter quantity, size, installation request, or custom details..."
+                      className="mt-3 w-full rounded-md border border-border bg-background/40 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-gold transition resize-y"
+                    />
                   </div>
                 </li>
               ))}

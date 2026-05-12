@@ -20,6 +20,7 @@ type Product = {
   finished_image: string | null;
   full_details: string | null;
   price: number | null;
+  family?: string | null;
 };
 
 function ProductPage() {
@@ -38,16 +39,18 @@ function ProductPage() {
       .eq("id", id)
       .maybeSingle()
       .then(({ data }) => {
-        setProduct(data as Product | null);
+        const prod = data as Product | null;
+        setProduct(prod);
         setLoading(false);
-        if (data?.category) {
-          supabase
+        if (prod?.category) {
+          // Prefer same family within the category. If no family set, fall back to category.
+          let q = supabase
             .from("products")
-            .select("id, product_name, category, product_type, product_image, price")
-            .eq("category", data.category)
-            .neq("id", id)
-            .limit(4)
-            .then(({ data: r }) => setRelated((r as Product[]) || []));
+            .select("id, product_name, category, product_type, product_image, price, family")
+            .eq("category", prod.category)
+            .neq("id", id);
+          if (prod.family) q = q.eq("family", prod.family);
+          q.order("created_at", { ascending: false }).then(({ data: r }) => setRelated((r as Product[]) || []));
         }
       });
   }, [id]);
@@ -173,7 +176,14 @@ function ProductPage() {
         {/* 4. Related */}
         {related.length > 0 && (
           <div className="mt-16">
-            <h2 className="font-display text-xl md:text-2xl font-bold text-primary mb-6">Related Products</h2>
+            <h2 className="font-display text-xl md:text-2xl font-bold text-primary mb-2">
+              {product.family ? `More in ${product.family}` : "Related Products"}
+            </h2>
+            <p className="text-xs text-muted-foreground mb-6">
+              {product.family
+                ? `All ${product.family} products in ${product.category}`
+                : `From the ${product.category} collection`}
+            </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {related.map((p) => <ProductCard key={p.id} p={p} />)}
             </div>

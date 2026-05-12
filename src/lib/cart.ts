@@ -8,6 +8,7 @@ export type CartItem = {
   product_image?: string | null;
   price?: number | null;
   qty: number;
+  note?: string | null;
 };
 
 const KEY = "dgj_cart_v1";
@@ -40,6 +41,10 @@ export const cart = {
   },
   setQty(id: string, qty: number) {
     items = items.map((x) => (x.id === id ? { ...x, qty: Math.max(1, qty) } : x));
+    persist();
+  },
+  setNote(id: string, note: string) {
+    items = items.map((x) => (x.id === id ? { ...x, note } : x));
     persist();
   },
   remove(id: string) {

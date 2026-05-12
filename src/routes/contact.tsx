@@ -5,8 +5,8 @@ import { SiteLayout } from "@/components/SiteLayout";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact Us — DE GREAT JAPHETH" },
-      { name: "description", content: "Get in touch with De Great Japheth for premium building materials and finishing." },
+      { title: "Contact Us — DE GREAT JAFFET" },
+      { name: "description", content: "Get in touch with De Great Jaffet for premium building materials and finishing." },
     ],
   }),
   component: ContactPage,
