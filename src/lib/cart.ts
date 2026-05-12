@@ -8,6 +8,7 @@ export type CartItem = {
   product_image?: string | null;
   price?: number | null;
   qty: number;
+  note?: string | null;
 };
 
 const KEY = "dgj_cart_v1";
