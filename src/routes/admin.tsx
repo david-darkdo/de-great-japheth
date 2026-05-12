@@ -359,6 +359,7 @@ async function uploadImage(file: File): Promise<string> {
 function UploadTab({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
+  const [family, setFamily] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [initialFile, setInitialFile] = useState<File | null>(null);
