@@ -445,6 +445,12 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           <option key={c} value={c}>{c}</option>
         ))}
       </select>
+      <div>
+        <input type="text" placeholder="Product Family (e.g. 60x60, Turkish Luxury, Premium Marble)" value={family}
+          onChange={(e) => setFamily(e.target.value)}
+          className="w-full border rounded px-3 py-2" />
+        <p className="text-[11px] text-muted-foreground mt-1">Optional. Groups related products inside the same category.</p>
+      </div>
       <input type="number" step="0.01" placeholder="Price" value={price}
         onChange={(e) => setPrice(e.target.value)}
         className="w-full border rounded px-3 py-2" />
