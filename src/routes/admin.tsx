@@ -405,6 +405,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
         .insert({
           product_name: name,
           category: category || null,
+          family: family.trim() || null,
           price: price ? Number(price) : null,
           product_image: productImageUrl,
           finished_image: finishedImageUrl,
@@ -415,7 +416,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
       if (error) throw error;
       console.log("[upload] saved:", data);
       setStatus("✓ Uploaded");
-      setName(""); setCategory(""); setPrice(""); setDescription("");
+      setName(""); setCategory(""); setFamily(""); setPrice(""); setDescription("");
       setInitialFile(null); setFinishedFile(null);
       if (initRef.current) initRef.current.value = "";
       if (finRef.current) finRef.current.value = "";
