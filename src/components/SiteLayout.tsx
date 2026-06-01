@@ -39,7 +39,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 group">
             <span className="font-display text-lg md:text-xl font-bold tracking-tight text-shimmer">
-              DE GREAT JAFFET
+              DE GREAT JAPHET
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
@@ -146,7 +146,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
       <footer className="mt-16 border-t border-[oklch(0.82_0.14_86/0.15)] bg-[oklch(0.10_0.02_260/0.8)] backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-12 grid gap-10 md:grid-cols-3">
           <div>
-            <h3 className="font-display text-xl mb-3 text-shimmer inline-block">DE GREAT JAFFET</h3>
+            <h3 className="font-display text-xl mb-3 text-shimmer inline-block">DE GREAT JAPHET</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Premium building materials and finishing for modern interiors. Living Greatfull.
             </p>
@@ -178,7 +178,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
         </div>
         <div className="border-t border-[oklch(0.82_0.14_86/0.10)]">
           <div className="max-w-7xl mx-auto px-4 py-4 text-xs text-muted-foreground text-center">
-            © {new Date().getFullYear()} De Great Jaffet. All rights reserved.
+            © {new Date().getFullYear()} De Great Japhet. All rights reserved.
           </div>
         </div>
       </footer>

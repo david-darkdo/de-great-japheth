@@ -9,7 +9,7 @@ import { cart } from "@/lib/cart";
 export const Route = createFileRoute("/showroom")({
   head: () => ({
     meta: [
-      { title: "Showroom — DE GREAT JAFFET" },
+      { title: "Showroom — DE GREAT JAPHET" },
       { name: "description", content: "Browse our full collection of premium building materials and finishing products." },
     ],
   }),

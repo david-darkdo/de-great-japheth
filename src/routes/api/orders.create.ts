@@ -68,7 +68,7 @@ async function buildPdf(opts: {
 
   // Header
   page.drawRectangle({ x: 0, y: height - 90, width, height: 90, color: dark });
-  page.drawText("DE GREAT JAFFET", { x: 40, y: height - 50, size: 20, font: fontBold, color: gold });
+  page.drawText("DE GREAT JAPHET", { x: 40, y: height - 50, size: 20, font: fontBold, color: gold });
   page.drawText("Premium Building Materials & Finishing", { x: 40, y: height - 70, size: 9, font, color: rgb(0.85, 0.85, 0.85) });
   page.drawText(`Order ${opts.orderCode}`, { x: width - 180, y: height - 50, size: 14, font: fontBold, color: gold });
   page.drawText(new Date().toLocaleString(), { x: width - 180, y: height - 68, size: 8, font, color: rgb(0.85, 0.85, 0.85) });
