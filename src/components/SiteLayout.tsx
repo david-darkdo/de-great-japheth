@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, MapPin, Phone, Mail, ShoppingBag, LogIn, LogOut, User, History } from "lucide-react";
+import { Menu, X, MapPin, Phone, Mail, ShoppingBag, LogIn, LogOut, User, History, ShieldCheck } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,11 +17,24 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
   const items = useCart();
   const count = items.reduce((s, x) => s + x.qty, 0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setUserEmail(data.session?.user?.email ?? null));
+    const checkRole = async (userId: string | undefined) => {
+      if (!userId) { setIsAdmin(false); return; }
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      setIsAdmin(!!roles?.some((r: any) => ["super_admin", "staff"].includes(r.role)));
+    };
+    supabase.auth.getSession().then(({ data }) => {
+      setUserEmail(data.session?.user?.email ?? null);
+      checkRole(data.session?.user?.id);
+    });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => {
       setUserEmail(sess?.user?.email ?? null);
+      checkRole(sess?.user?.id);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -39,7 +52,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 group">
             <span className="font-display text-lg md:text-xl font-bold tracking-tight text-shimmer">
-              DE GREAT JAFFET
+              DE GREAT JAPHET
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-8">
@@ -70,6 +83,16 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
             </Link>
             {userEmail ? (
               <>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="hidden md:inline-flex p-2 rounded-md text-gold hover:text-gold/80 transition-colors"
+                    aria-label="Command Center"
+                    title="Command Center"
+                  >
+                    <ShieldCheck size={18} />
+                  </Link>
+                )}
                 <Link
                   to="/orders"
                   className="hidden md:inline-flex p-2 rounded-md text-foreground hover:text-gold transition-colors"
@@ -127,6 +150,11 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                   <Link to="/orders" className="py-3 text-base text-foreground hover:text-gold transition inline-flex items-center gap-2 border-b border-border">
                     <History size={16} /> Order history
                   </Link>
+                  {isAdmin && (
+                    <Link to="/admin" className="py-3 text-base text-gold hover:text-gold/80 transition inline-flex items-center gap-2 border-b border-border">
+                      <ShieldCheck size={16} /> Command Center
+                    </Link>
+                  )}
                   <button onClick={signOut} className="py-3 text-base text-left text-foreground hover:text-gold transition inline-flex items-center gap-2">
                     <LogOut size={16} /> Sign out
                   </button>
@@ -146,7 +174,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
       <footer className="mt-16 border-t border-[oklch(0.82_0.14_86/0.15)] bg-[oklch(0.10_0.02_260/0.8)] backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-12 grid gap-10 md:grid-cols-3">
           <div>
-            <h3 className="font-display text-xl mb-3 text-shimmer inline-block">DE GREAT JAFFET</h3>
+            <h3 className="font-display text-xl mb-3 text-shimmer inline-block">DE GREAT JAPHET</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Premium building materials and finishing for modern interiors. Living Greatfull.
             </p>
@@ -178,7 +206,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
         </div>
         <div className="border-t border-[oklch(0.82_0.14_86/0.10)]">
           <div className="max-w-7xl mx-auto px-4 py-4 text-xs text-muted-foreground text-center">
-            © {new Date().getFullYear()} De Great Jaffet. All rights reserved.
+            © {new Date().getFullYear()} De Great Japhet. All rights reserved.
           </div>
         </div>
       </footer>

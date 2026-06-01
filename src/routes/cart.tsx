@@ -6,7 +6,7 @@ import { cart, useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/cart")({
-  head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAFFET" }] }),
+  head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAPHET" }] }),
   component: CartPage,
 });
 
@@ -14,7 +14,7 @@ const WA = "2347066786626";
 
 function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
   const lines: string[] = [];
-  lines.push("Hello DE GREAT JAFFET 👋");
+  lines.push("Hello DE GREAT JAPHET 👋");
   lines.push("");
   lines.push(`ORDER CODE: ${orderCode}`);
   lines.push("");
