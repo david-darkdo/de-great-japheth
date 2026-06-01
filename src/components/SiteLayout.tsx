@@ -150,6 +150,11 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                   <Link to="/orders" className="py-3 text-base text-foreground hover:text-gold transition inline-flex items-center gap-2 border-b border-border">
                     <History size={16} /> Order history
                   </Link>
+                  {isAdmin && (
+                    <Link to="/admin" className="py-3 text-base text-gold hover:text-gold/80 transition inline-flex items-center gap-2 border-b border-border">
+                      <ShieldCheck size={16} /> Command Center
+                    </Link>
+                  )}
                   <button onClick={signOut} className="py-3 text-base text-left text-foreground hover:text-gold transition inline-flex items-center gap-2">
                     <LogOut size={16} /> Sign out
                   </button>
