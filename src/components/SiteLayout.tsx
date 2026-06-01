@@ -17,11 +17,24 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
   const items = useCart();
   const count = items.reduce((s, x) => s + x.qty, 0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setUserEmail(data.session?.user?.email ?? null));
+    const checkRole = async (userId: string | undefined) => {
+      if (!userId) { setIsAdmin(false); return; }
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      setIsAdmin(!!roles?.some((r: any) => ["super_admin", "staff"].includes(r.role)));
+    };
+    supabase.auth.getSession().then(({ data }) => {
+      setUserEmail(data.session?.user?.email ?? null);
+      checkRole(data.session?.user?.id);
+    });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => {
       setUserEmail(sess?.user?.email ?? null);
+      checkRole(sess?.user?.id);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
