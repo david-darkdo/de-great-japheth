@@ -83,6 +83,16 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
             </Link>
             {userEmail ? (
               <>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="hidden md:inline-flex p-2 rounded-md text-gold hover:text-gold/80 transition-colors"
+                    aria-label="Command Center"
+                    title="Command Center"
+                  >
+                    <ShieldCheck size={18} />
+                  </Link>
+                )}
                 <Link
                   to="/orders"
                   className="hidden md:inline-flex p-2 rounded-md text-foreground hover:text-gold transition-colors"
