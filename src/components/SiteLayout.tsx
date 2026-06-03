@@ -48,7 +48,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
   const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
-    <div className="min-h-screen flex flex-col text-foreground">
+    <div className="min-h-screen flex flex-col text-foreground pb-[calc(env(safe-area-inset-bottom)+4rem)] md:pb-0">
       <header className="sticky top-0 z-50 glass border-b border-[oklch(0.82_0.14_86/0.18)]">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 group">
