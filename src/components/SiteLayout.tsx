@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Menu, X, MapPin, Phone, Mail, ShoppingBag, LogIn, LogOut, User, History, ShieldCheck } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
+import { BottomNav } from "@/components/BottomNav";
 
 const NAV = [
   { to: "/", label: "Home" },
@@ -47,7 +48,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
   const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
-    <div className="min-h-screen flex flex-col text-foreground">
+    <div className="min-h-screen flex flex-col text-foreground pb-[calc(env(safe-area-inset-bottom)+4rem)] md:pb-0">
       <header className="sticky top-0 z-50 glass border-b border-[oklch(0.82_0.14_86/0.18)]">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 group">
@@ -171,6 +172,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">{children}</main>
 
+
       <footer className="mt-16 border-t border-[oklch(0.82_0.14_86/0.15)] bg-[oklch(0.10_0.02_260/0.8)] backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-12 grid gap-10 md:grid-cols-3">
           <div>
@@ -210,6 +212,8 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      <BottomNav />
     </div>
   );
 }
