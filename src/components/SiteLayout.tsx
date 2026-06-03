@@ -212,6 +212,8 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      <BottomNav />
     </div>
   );
 }
