@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Menu, X, MapPin, Phone, Mail, ShoppingBag, LogIn, LogOut, User, History, ShieldCheck } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
+import { BottomNav } from "@/components/BottomNav";
 
 const NAV = [
   { to: "/", label: "Home" },
