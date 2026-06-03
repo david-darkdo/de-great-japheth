@@ -172,6 +172,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
 
       <main className="flex-1">{children}</main>
 
+
       <footer className="mt-16 border-t border-[oklch(0.82_0.14_86/0.15)] bg-[oklch(0.10_0.02_260/0.8)] backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-12 grid gap-10 md:grid-cols-3">
           <div>
