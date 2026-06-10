@@ -21,6 +21,7 @@ type Product = {
   finished_image: string | null;
   full_details: string | null;
   price: number | null;
+  currency?: string | null;
   family?: string | null;
 };
 
