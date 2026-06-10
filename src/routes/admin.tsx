@@ -455,9 +455,16 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           className="w-full border rounded px-3 py-2" />
         <p className="text-[11px] text-muted-foreground mt-1">Optional. Groups related products inside the same category.</p>
       </div>
-      <input type="number" step="0.01" placeholder="Price" value={price}
-        onChange={(e) => setPrice(e.target.value)}
-        className="w-full border rounded px-3 py-2" />
+      <div className="flex gap-2">
+        <select value={currency} onChange={(e) => setCurrency(e.target.value as "NGN" | "USD")}
+          className="border rounded px-3 py-2 bg-background">
+          <option value="NGN">₦ Naira</option>
+          <option value="USD">$ Dollar</option>
+        </select>
+        <input type="number" step="0.01" placeholder="Price" value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          className="flex-1 border rounded px-3 py-2" />
+      </div>
       <textarea
         placeholder="Product Description"
         value={description}
