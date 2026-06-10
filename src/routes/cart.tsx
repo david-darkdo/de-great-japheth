@@ -152,7 +152,7 @@ function CartPage() {
                       {it.category}{it.item_code ? ` · ${it.item_code}` : ""}
                     </p>
                     {it.price != null && (
-                      <p className="text-sm text-gold font-semibold mt-1">₦{Number(it.price).toLocaleString()}</p>
+                      <p className="text-sm text-gold font-semibold mt-1">{formatPrice(it.price, it.currency)}</p>
                     )}
                     <div className="mt-2 flex items-center gap-3">
                       <div className="inline-flex items-center rounded-md border border-border bg-background/40">
