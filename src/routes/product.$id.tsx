@@ -158,6 +158,7 @@ function ProductPage() {
                   category: product.category,
                   product_image: product.product_image,
                   price: product.price,
+                  currency: product.currency,
                 });
                 nav({ to: "/cart" });
               }}
