@@ -23,6 +23,7 @@ type Product = {
   product_type: string | null;
   product_image: string | null;
   price: number | null;
+  currency?: string | null;
   item_code?: string | null;
 };
 
