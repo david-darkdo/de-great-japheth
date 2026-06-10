@@ -119,7 +119,7 @@ function ProductPage() {
           )}
           {product.price != null && (
             <p className="font-display text-3xl text-shimmer mt-3">
-              ₦{Number(product.price).toLocaleString()}
+              {formatPrice(product.price, product.currency)}
             </p>
           )}
           {product.full_details && (
