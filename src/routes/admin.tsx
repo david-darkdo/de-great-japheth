@@ -332,7 +332,7 @@ function ProductsTab({
             <p className="text-xs text-muted-foreground">
               {p.category || "—"}{p.family ? ` · ${p.family}` : ""}
             </p>
-            <p className="text-sm">{p.price != null ? `$${Number(p.price).toFixed(2)}` : "—"}</p>
+            <p className="text-sm">{p.price != null ? formatPrice(p.price, p.currency) : "—"}</p>
             <div className="flex gap-2 pt-2">
               <button onClick={() => onEdit(p)} className="flex-1 border rounded py-1 text-sm">Edit</button>
               <button
