@@ -185,10 +185,12 @@ function CartPage() {
                 <span className="text-sm text-muted-foreground">Items</span>
                 <span className="text-sm">{items.reduce((s, x) => s + x.qty, 0)}</span>
               </div>
-              {total > 0 && (
+              {totalEntries.length > 0 && (
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Estimated total</span>
-                  <span className="font-display text-xl text-gold">₦{total.toLocaleString()}</span>
+                  <span className="font-display text-xl text-gold">
+                    {totalEntries.map(([cur, v]) => `${currencySymbol(cur)}${v.toLocaleString()}`).join(" + ")}
+                  </span>
                 </div>
               )}
               <p className="mt-3 text-xs text-muted-foreground">
