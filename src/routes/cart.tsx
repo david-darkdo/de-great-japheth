@@ -24,7 +24,7 @@ function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
   items.forEach((it, i) => {
     const code = it.item_code ? ` (Code: ${it.item_code})` : "";
     const cat = it.category ? ` — ${it.category}` : "";
-    const price = it.price != null ? ` — ₦${Number(it.price).toLocaleString()}` : "";
+    const price = it.price != null ? ` — ${formatPrice(it.price, it.currency)}` : "";
     lines.push(`${i + 1}. ${it.product_name}${cat}${code}${price}`);
     const note = (it.note || "").trim();
     if (note) lines.push(`   Request: ${note}`);
