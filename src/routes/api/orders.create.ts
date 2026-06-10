@@ -10,6 +10,7 @@ type Item = {
   item_code?: string | null;
   product_image?: string | null;
   price?: number | null;
+  currency?: string | null;
   qty: number;
   note?: string | null;
 };
@@ -121,8 +122,9 @@ async function buildPdf(opts: {
     if (meta) page.drawText(meta, { x: tx, y: y - 22, size: 8, font, color: muted });
     page.drawText(`Quantity: ${it.qty}`, { x: tx, y: y - 36, size: 9, font, color: dark });
     if (it.price != null) {
-      page.drawText(`Unit: NGN ${Number(it.price).toLocaleString()}`, { x: tx + 110, y: y - 36, size: 9, font, color: dark });
-      page.drawText(`Subtotal: NGN ${(Number(it.price) * it.qty).toLocaleString()}`, { x: tx + 240, y: y - 36, size: 9, font: fontBold, color: gold });
+      const cur = it.currency === "USD" ? "USD" : "NGN";
+      page.drawText(`Unit: ${cur} ${Number(it.price).toLocaleString()}`, { x: tx + 110, y: y - 36, size: 9, font, color: dark });
+      page.drawText(`Subtotal: ${cur} ${(Number(it.price) * it.qty).toLocaleString()}`, { x: tx + 240, y: y - 36, size: 9, font: fontBold, color: gold });
     }
 
     let cursor = y - 52;

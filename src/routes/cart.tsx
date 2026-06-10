@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Trash2, Minus, Plus, MessageCircle, ShoppingBag, ArrowLeft, History, Loader2 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { cart, useCart } from "@/lib/cart";
+import { formatPrice, currencySymbol } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/cart")({
@@ -23,7 +24,7 @@ function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
   items.forEach((it, i) => {
     const code = it.item_code ? ` (Code: ${it.item_code})` : "";
     const cat = it.category ? ` — ${it.category}` : "";
-    const price = it.price != null ? ` — ₦${Number(it.price).toLocaleString()}` : "";
+    const price = it.price != null ? ` — ${formatPrice(it.price, it.currency)}` : "";
     lines.push(`${i + 1}. ${it.product_name}${cat}${code}${price}`);
     const note = (it.note || "").trim();
     if (note) lines.push(`   Request: ${note}`);
@@ -36,7 +37,12 @@ function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
 function CartPage() {
   const items = useCart();
   const navigate = useNavigate();
-  const total = items.reduce((s, x) => s + (x.price ?? 0) * x.qty, 0);
+  const totalsByCurrency = items.reduce((acc, x) => {
+    const cur = x.currency || "NGN";
+    acc[cur] = (acc[cur] || 0) + (x.price ?? 0) * x.qty;
+    return acc;
+  }, {} as Record<string, number>);
+  const totalEntries = Object.entries(totalsByCurrency).filter(([, v]) => v > 0);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [errMsg, setErrMsg] = useState("");
@@ -146,7 +152,7 @@ function CartPage() {
                       {it.category}{it.item_code ? ` · ${it.item_code}` : ""}
                     </p>
                     {it.price != null && (
-                      <p className="text-sm text-gold font-semibold mt-1">₦{Number(it.price).toLocaleString()}</p>
+                      <p className="text-sm text-gold font-semibold mt-1">{formatPrice(it.price, it.currency)}</p>
                     )}
                     <div className="mt-2 flex items-center gap-3">
                       <div className="inline-flex items-center rounded-md border border-border bg-background/40">
@@ -179,10 +185,12 @@ function CartPage() {
                 <span className="text-sm text-muted-foreground">Items</span>
                 <span className="text-sm">{items.reduce((s, x) => s + x.qty, 0)}</span>
               </div>
-              {total > 0 && (
+              {totalEntries.length > 0 && (
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Estimated total</span>
-                  <span className="font-display text-xl text-gold">₦{total.toLocaleString()}</span>
+                  <span className="font-display text-xl text-gold">
+                    {totalEntries.map(([cur, v]) => `${currencySymbol(cur)}${v.toLocaleString()}`).join(" + ")}
+                  </span>
                 </div>
               )}
               <p className="mt-3 text-xs text-muted-foreground">

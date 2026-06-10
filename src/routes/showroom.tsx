@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
 import { CATEGORIES, categorySlug } from "@/lib/categories";
 import { cart } from "@/lib/cart";
+import { formatPrice } from "@/lib/currency";
 
 export const Route = createFileRoute("/showroom")({
   head: () => ({
@@ -23,6 +24,7 @@ type Product = {
   product_type: string | null;
   product_image: string | null;
   price: number | null;
+  currency?: string | null;
   item_code?: string | null;
 };
 
@@ -34,7 +36,7 @@ function ShowroomPage() {
   useEffect(() => {
     supabase
       .from("products")
-      .select("id, product_name, category, product_type, product_image, price, item_code")
+      .select("id, product_name, category, product_type, product_image, price, currency, item_code")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setProducts((data as Product[]) || []);
@@ -132,6 +134,7 @@ export function ProductCard({ p }: { p: Product }) {
             category: p.category,
             product_image: p.product_image,
             price: p.price,
+            currency: p.currency,
           });
           setAdded(true);
           setTimeout(() => setAdded(false), 1400);
