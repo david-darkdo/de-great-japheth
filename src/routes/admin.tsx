@@ -706,6 +706,7 @@ function EditProductModal({
           category: category || null,
           family: family.trim() || null,
           price: price ? Number(price) : null,
+          currency,
           product_image: url || null,
         })
         .eq("id", product.id);
