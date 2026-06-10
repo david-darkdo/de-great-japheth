@@ -681,6 +681,7 @@ function EditProductModal({
   const [category, setCategory] = useState(product.category || "");
   const [family, setFamily] = useState(product.family || "");
   const [price, setPrice] = useState(product.price?.toString() || "");
+  const [currency, setCurrency] = useState<"NGN" | "USD">((product.currency as "NGN" | "USD") || "NGN");
   const [imageUrl, setImageUrl] = useState(product.product_image || "");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
