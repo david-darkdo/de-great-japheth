@@ -134,6 +134,7 @@ export function ProductCard({ p }: { p: Product }) {
             category: p.category,
             product_image: p.product_image,
             price: p.price,
+            currency: p.currency,
           });
           setAdded(true);
           setTimeout(() => setAdded(false), 1400);
