@@ -30,7 +30,7 @@ function CategoryPage() {
     setLoading(true);
     supabase
       .from("products")
-      .select("id, product_name, category, product_type, product_image, price")
+      .select("id, product_name, category, product_type, product_image, price, currency")
       .eq("category", category)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
