@@ -37,7 +37,12 @@ function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
 function CartPage() {
   const items = useCart();
   const navigate = useNavigate();
-  const total = items.reduce((s, x) => s + (x.price ?? 0) * x.qty, 0);
+  const totalsByCurrency = items.reduce((acc, x) => {
+    const cur = x.currency || "NGN";
+    acc[cur] = (acc[cur] || 0) + (x.price ?? 0) * x.qty;
+    return acc;
+  }, {} as Record<string, number>);
+  const totalEntries = Object.entries(totalsByCurrency).filter(([, v]) => v > 0);
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [errMsg, setErrMsg] = useState("");
