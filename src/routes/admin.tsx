@@ -12,6 +12,7 @@ type Product = {
   product_name: string;
   category: string | null;
   price: number | null;
+  currency?: string | null;
   product_image: string | null;
   item_code?: string | null;
   product_type?: string | null;
