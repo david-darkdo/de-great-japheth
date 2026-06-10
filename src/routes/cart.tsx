@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Trash2, Minus, Plus, MessageCircle, ShoppingBag, ArrowLeft, History, Loader2 } from "lucide-react";
 import { SiteLayout } from "@/components/SiteLayout";
 import { cart, useCart } from "@/lib/cart";
+import { formatPrice, currencySymbol } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/cart")({
