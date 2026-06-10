@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
 import { CATEGORIES, categorySlug } from "@/lib/categories";
 import { cart } from "@/lib/cart";
+import { formatPrice } from "@/lib/currency";
 
 export const Route = createFileRoute("/showroom")({
   head: () => ({
