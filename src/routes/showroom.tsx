@@ -35,7 +35,7 @@ function ShowroomPage() {
   useEffect(() => {
     supabase
       .from("products")
-      .select("id, product_name, category, product_type, product_image, price, item_code")
+      .select("id, product_name, category, product_type, product_image, price, currency, item_code")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setProducts((data as Product[]) || []);
