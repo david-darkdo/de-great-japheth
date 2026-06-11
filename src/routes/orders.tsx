@@ -99,11 +99,11 @@ function OrdersPage() {
                           <p className="text-[11px] text-muted-foreground">
                             {it.category}{it.item_code ? ` · ${it.item_code}` : ""} · Qty {it.qty}
                           </p>
-                          {it.note && (
-                            <p className="mt-1 text-xs text-foreground/80 italic border-l-2 border-gold/40 pl-2">
-                              "{it.note}"
-                            </p>
-                          )}
+                              {it.note && (
+                                <p className="mt-1 text-xs text-foreground/80 italic border-l-2 border-gold/40 pl-2">
+                                  {it.note}
+                                </p>
+                              )}
                         </div>
                       </li>
                     ))}

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+// Removed lovable import – using Supabase OAuth directly
 import { SiteLayout } from "@/components/SiteLayout";
 
 export const Route = createFileRoute("/auth")({
@@ -65,14 +65,23 @@ function AuthPage() {
   };
 
   const google = async () => {
-    setBusy(true); setMsg("");
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}${redirect}`,
-    });
-    if (result.error) { setMsg((result.error as any).message || "Google sign-in failed"); setBusy(false); return; }
-    if (result.redirected) return;
-    continueAfterAuth();
-  };
+  setBusy(true);
+  setMsg("");
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${window.location.origin}${redirect}`,
+    },
+  });
+  if (error) {
+    setMsg(error.message || "Google sign-in failed");
+    setBusy(false);
+    return;
+  }
+  // Supabase handles the session; after successful sign‑in we can proceed
+  setBusy(false);
+  continueAfterAuth();
+};
 
   return (
     <SiteLayout>
