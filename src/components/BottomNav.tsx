@@ -87,8 +87,8 @@ export function BottomNav() {
               </div>
             ) : (
               <div className="flex flex-col">
-                <PanelLink to="/auth" search={{ redirect: "/", mode: "signin" }} icon={LogIn}>Login</PanelLink>
-                <PanelLink to="/auth" search={{ redirect: "/", mode: "signup" }} icon={UserCircle} gold>Create account</PanelLink>
+                <PanelLink to="/auth" search={{ redirect: "/showroom", mode: "signin" }} icon={LogIn}>Login</PanelLink>
+                <PanelLink to="/auth" search={{ redirect: "/showroom", mode: "signup" }} icon={UserCircle} gold>Create account</PanelLink>
               </div>
             )}
           </div>
@@ -100,7 +100,7 @@ export function BottomNav() {
         aria-label="Bottom navigation"
       >
         <div className="relative max-w-md mx-auto h-16 grid grid-cols-5 items-center px-2">
-          <Tab to="/" icon={Home} label="Home" active={isActive("/", true)} />
+          <Tab to="/showroom" icon={Home} label="Home" active={isActive("/showroom")} />
           <Tab to="/contact" icon={Phone} label="Contact" active={isActive("/contact")} />
 
           {/* Center showroom */}
