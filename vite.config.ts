@@ -5,12 +5,15 @@ import { nitro } from "nitro/vite";
 import tailwindcss from "@tailwindcss/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
+// Nitro is only needed to emit Vercel's Build Output API structure.
+// On Lovable (Cloudflare Workers) it changes the output dir to `.output`,
+// which breaks the platform's `dist/` build check — so enable it on Vercel only.
+const isVercel = !!process.env.VERCEL;
+
 export default defineConfig({
   plugins: [
     tanstackStart(),
-    nitro({
-      preset: process.env.VERCEL ? "vercel" : undefined,
-    }),
+    ...(isVercel ? [nitro({ preset: "vercel" })] : []),
     tailwindcss(),
     viteReact(),
     tsConfigPaths(),
