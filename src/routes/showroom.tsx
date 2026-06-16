@@ -28,7 +28,7 @@ type Product = {
   item_code?: string | null;
 };
 
-export function ShowroomPage() {
+function ShowroomPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [active, setActive] = useState<string>("All");
   const [loading, setLoading] = useState(true);
@@ -51,6 +51,18 @@ export function ShowroomPage() {
 
   return (
     <SiteLayout>
+      <section className="relative overflow-hidden border-b border-[oklch(0.82_0.14_86/0.15)]">
+        <div className="absolute inset-0 bg-gradient-blue opacity-60" />
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-[oklch(0.82_0.14_86/0.12)] blur-3xl animate-[float_8s_ease-in-out_infinite]" />
+        <div className="relative max-w-7xl mx-auto px-4 py-12 md:py-20 animate-[fade-up_.7s_ease-out_both]">
+          <p className="text-xs tracking-[0.3em] text-gold uppercase mb-2">Showroom</p>
+          <h1 className="font-display text-4xl md:text-5xl font-bold text-shimmer">Explore Our Collection</h1>
+          <p className="mt-3 text-muted-foreground max-w-2xl">
+            Discover premium materials across every finishing category. Tap to add to your selection — send everything together on WhatsApp.
+          </p>
+        </div>
+      </section>
+
       {/* Category tabs */}
       <div className="sticky top-16 z-40 glass border-b border-[oklch(0.82_0.14_86/0.12)]">
         <div className="max-w-7xl mx-auto px-4">

@@ -13,7 +13,6 @@ export type CartItem = {
 };
 
 const KEY = "dgj_cart_v1";
-const EMPTY_CART: CartItem[] = [];
 let items: CartItem[] = [];
 const listeners = new Set<() => void>();
 
@@ -64,7 +63,7 @@ export function useCart() {
   const snap = useSyncExternalStore(
     (l) => cart.subscribe(l),
     () => items,
-    () => EMPTY_CART
+    () => [] as CartItem[]
   );
-  return hydrated ? snap : EMPTY_CART;
+  return hydrated ? snap : [];
 }

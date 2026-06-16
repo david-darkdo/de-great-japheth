@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as Char91indexChar93RouteImport } from './routes/[index]'
 import { Route as SystemLoginRouteImport } from './routes/system-login'
 import { Route as StartProjectRouteImport } from './routes/start-project'
 import { Route as ShowroomRouteImport } from './routes/showroom'
@@ -24,11 +23,6 @@ import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload-image'
 import { Route as ApiOrdersCreateRouteImport } from './routes/api/orders.create'
 
-const Char91indexChar93Route = Char91indexChar93RouteImport.update({
-  id: '/index',
-  path: '/index',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SystemLoginRoute = SystemLoginRouteImport.update({
   id: '/system-login',
   path: '/system-login',
@@ -101,7 +95,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/contact': typeof ContactRoute
-  '/index': typeof Char91indexChar93Route
   '/orders': typeof OrdersRoute
   '/showroom': typeof ShowroomRoute
   '/start-project': typeof StartProjectRoute
@@ -117,7 +110,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/contact': typeof ContactRoute
-  '/index': typeof Char91indexChar93Route
   '/orders': typeof OrdersRoute
   '/showroom': typeof ShowroomRoute
   '/start-project': typeof StartProjectRoute
@@ -134,7 +126,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/cart': typeof CartRoute
   '/contact': typeof ContactRoute
-  '/index': typeof Char91indexChar93Route
   '/orders': typeof OrdersRoute
   '/showroom': typeof ShowroomRoute
   '/start-project': typeof StartProjectRoute
@@ -152,7 +143,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/contact'
-    | '/index'
     | '/orders'
     | '/showroom'
     | '/start-project'
@@ -168,7 +158,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/contact'
-    | '/index'
     | '/orders'
     | '/showroom'
     | '/start-project'
@@ -184,7 +173,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cart'
     | '/contact'
-    | '/index'
     | '/orders'
     | '/showroom'
     | '/start-project'
@@ -201,7 +189,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CartRoute: typeof CartRoute
   ContactRoute: typeof ContactRoute
-  Char91indexChar93Route: typeof Char91indexChar93Route
   OrdersRoute: typeof OrdersRoute
   ShowroomRoute: typeof ShowroomRoute
   StartProjectRoute: typeof StartProjectRoute
@@ -214,13 +201,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/index': {
-      id: '/index'
-      path: '/index'
-      fullPath: '/index'
-      preLoaderRoute: typeof Char91indexChar93RouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/system-login': {
       id: '/system-login'
       path: '/system-login'
@@ -321,7 +301,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CartRoute: CartRoute,
   ContactRoute: ContactRoute,
-  Char91indexChar93Route: Char91indexChar93Route,
   OrdersRoute: OrdersRoute,
   ShowroomRoute: ShowroomRoute,
   StartProjectRoute: StartProjectRoute,
