@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
 import { ProductCard } from "@/routes/showroom";
 import { cart } from "@/lib/cart";
-import { formatPrice } from "@/lib/currency";
 
 export const Route = createFileRoute("/product/$id")({
   component: ProductPage,
@@ -21,7 +20,6 @@ type Product = {
   finished_image: string | null;
   full_details: string | null;
   price: number | null;
-  currency?: string | null;
   family?: string | null;
 };
 
@@ -121,7 +119,7 @@ function ProductPage() {
           )}
           {product.price != null && (
             <p className="font-display text-3xl text-shimmer mt-3">
-              {formatPrice(product.price, product.currency)}
+              ₦{Number(product.price).toLocaleString()}
             </p>
           )}
           {product.full_details && (
@@ -140,7 +138,6 @@ function ProductPage() {
                   category: product.category,
                   product_image: product.product_image,
                   price: product.price,
-                  currency: product.currency,
                 });
                 setAdded(true);
                 setTimeout(() => setAdded(false), 1600);
@@ -158,7 +155,6 @@ function ProductPage() {
                   category: product.category,
                   product_image: product.product_image,
                   price: product.price,
-                  currency: product.currency,
                 });
                 nav({ to: "/cart" });
               }}

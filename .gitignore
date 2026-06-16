@@ -16,11 +16,6 @@ dist-ssr
 .nitro
 *.local
 
-# Environment variables — never commit real credentials
-.env
-.env.*
-!.env.example
-
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

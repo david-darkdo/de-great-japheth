@@ -7,7 +7,6 @@ export type CartItem = {
   category?: string | null;
   product_image?: string | null;
   price?: number | null;
-  currency?: string | null;
   qty: number;
   note?: string | null;
 };

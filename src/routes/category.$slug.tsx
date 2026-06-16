@@ -16,7 +16,6 @@ type Product = {
   product_type: string | null;
   product_image: string | null;
   price: number | null;
-  currency?: string | null;
 };
 
 function CategoryPage() {
@@ -30,7 +29,7 @@ function CategoryPage() {
     setLoading(true);
     supabase
       .from("products")
-      .select("id, product_name, category, product_type, product_image, price, currency")
+      .select("id, product_name, category, product_type, product_image, price")
       .eq("category", category)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
