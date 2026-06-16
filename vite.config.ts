@@ -11,6 +11,9 @@ import tsConfigPaths from "vite-tsconfig-paths";
 const isVercel = !!process.env.VERCEL;
 
 export default defineConfig({
+  resolve: {
+    noExternal: ["h3-v2", "h3", "rou3", "srvx"],
+  },
   plugins: [
     tanstackStart(),
     ...(isVercel ? [nitro({ preset: "vercel" })] : []),
