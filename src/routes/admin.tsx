@@ -410,6 +410,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           category: category || null,
           family: family.trim() || null,
           price: price ? Number(price) : null,
+          currency,
           product_image: productImageUrl,
           finished_image: finishedImageUrl,
           full_details: description || null,
