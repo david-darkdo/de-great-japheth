@@ -12,6 +12,7 @@ type Product = {
   product_name: string;
   category: string | null;
   price: number | null;
+  currency?: string | null;
   product_image: string | null;
   item_code?: string | null;
   product_type?: string | null;
@@ -330,7 +331,7 @@ function ProductsTab({
             <p className="text-xs text-muted-foreground">
               {p.category || "—"}{p.family ? ` · ${p.family}` : ""}
             </p>
-            <p className="text-sm">{p.price != null ? `$${Number(p.price).toFixed(2)}` : "—"}</p>
+            <p className="text-sm">{p.price != null ? `${p.currency === "NGN" ? "₦" : "$"}${Number(p.price).toFixed(2)}` : "—"}</p>
             <div className="flex gap-2 pt-2">
               <button onClick={() => onEdit(p)} className="flex-1 border rounded py-1 text-sm">Edit</button>
               <button
@@ -363,6 +364,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   const [category, setCategory] = useState("");
   const [family, setFamily] = useState("");
   const [price, setPrice] = useState("");
+  const [currency, setCurrency] = useState("USD");
   const [description, setDescription] = useState("");
   const [initialFile, setInitialFile] = useState<File | null>(null);
   const [finishedFile, setFinishedFile] = useState<File | null>(null);
@@ -409,6 +411,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           category: category || null,
           family: family.trim() || null,
           price: price ? Number(price) : null,
+          currency,
           product_image: productImageUrl,
           finished_image: finishedImageUrl,
           full_details: description || null,
@@ -418,7 +421,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
       if (error) throw error;
       console.log("[upload] saved:", data);
       setStatus("✓ Uploaded");
-      setName(""); setCategory(""); setFamily(""); setPrice(""); setDescription("");
+      setName(""); setCategory(""); setFamily(""); setPrice(""); setCurrency("USD"); setDescription("");
       setInitialFile(null); setFinishedFile(null);
       if (initRef.current) initRef.current.value = "";
       if (finRef.current) finRef.current.value = "";
@@ -453,9 +456,16 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           className="w-full border rounded px-3 py-2" />
         <p className="text-[11px] text-muted-foreground mt-1">Optional. Groups related products inside the same category.</p>
       </div>
-      <input type="number" step="0.01" placeholder="Price" value={price}
-        onChange={(e) => setPrice(e.target.value)}
-        className="w-full border rounded px-3 py-2" />
+      <div className="flex gap-2">
+        <select value={currency} onChange={(e) => setCurrency(e.target.value)}
+          className="border rounded px-3 py-2 bg-background">
+          <option value="USD">USD ($)</option>
+          <option value="NGN">Naira (₦)</option>
+        </select>
+        <input type="number" step="0.01" placeholder="Price" value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          className="w-full border rounded px-3 py-2" />
+      </div>
       <textarea
         placeholder="Product Description"
         value={description}
@@ -672,6 +682,7 @@ function EditProductModal({
   const [category, setCategory] = useState(product.category || "");
   const [family, setFamily] = useState(product.family || "");
   const [price, setPrice] = useState(product.price?.toString() || "");
+  const [currency, setCurrency] = useState(product.currency || "USD");
   const [imageUrl, setImageUrl] = useState(product.product_image || "");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -695,6 +706,7 @@ function EditProductModal({
           category: category || null,
           family: family.trim() || null,
           price: price ? Number(price) : null,
+          currency,
           product_image: url || null,
         })
         .eq("id", product.id);
@@ -724,8 +736,15 @@ function EditProductModal({
         </select>
         <input className="w-full border rounded px-3 py-2" placeholder="Family (e.g. 60x60, Turkish Luxury)"
           value={family} onChange={(e) => setFamily(e.target.value)} />
-        <input className="w-full border rounded px-3 py-2" type="number" step="0.01" placeholder="Price" value={price}
-          onChange={(e) => setPrice(e.target.value)} />
+        <div className="flex gap-2">
+          <select className="border rounded px-3 py-2 bg-background" value={currency}
+            onChange={(e) => setCurrency(e.target.value)}>
+            <option value="USD">USD ($)</option>
+            <option value="NGN">Naira (₦)</option>
+          </select>
+          <input className="w-full border rounded px-3 py-2" type="number" step="0.01" placeholder="Price" value={price}
+            onChange={(e) => setPrice(e.target.value)} />
+        </div>
         {(file ? URL.createObjectURL(file) : imageUrl) && (
           <img
             src={file ? URL.createObjectURL(file) : imageUrl}
