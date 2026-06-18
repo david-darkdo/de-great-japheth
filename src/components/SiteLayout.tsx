@@ -63,7 +63,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                 to={n.to}
                 className="relative text-sm font-medium text-muted-foreground hover:text-gold transition-colors after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-full after:scale-x-0 after:origin-left after:bg-[var(--gold)] after:transition-transform hover:after:scale-x-100"
                 activeProps={{ className: "text-gold after:scale-x-100" }}
-                activeOptions={{ exact: n.to === "/" }}
+                activeOptions={{ exact: n.to === "/home" }}
               >
                 {n.label}
               </Link>
