@@ -18,7 +18,7 @@ const CATEGORY_COVER_IMAGES: Record<string, string> = {
   "Ceiling Materials": catCeiling,
 };
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/home")({
   head: () => ({
     meta: [
       { title: "DE GREAT JAPHET — Living Greatfull" },
