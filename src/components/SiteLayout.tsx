@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 
 const NAV = [
-  { to: "/", label: "Home" },
+  { to: "/home", label: "Home" },
   { to: "/showroom", label: "Showroom" },
   { to: "/start-project", label: "Start Project" },
   { to: "/contact", label: "Contact" },
