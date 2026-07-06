@@ -40,6 +40,7 @@ export type Database = {
       }
       cart_email_progress: {
         Row: {
+          cart_items: Json
           created_at: string
           current_product_index: number
           id: string
@@ -48,6 +49,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cart_items?: Json
           created_at?: string
           current_product_index?: number
           id?: string
@@ -56,6 +58,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cart_items?: Json
           created_at?: string
           current_product_index?: number
           id?: string
