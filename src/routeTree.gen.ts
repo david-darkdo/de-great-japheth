@@ -24,6 +24,7 @@ import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload-image'
 import { Route as EmailTrackWhatsappRouteImport } from './routes/email.track.whatsapp'
 import { Route as EmailTrackShowroomRouteImport } from './routes/email.track.showroom'
+import { Route as EmailTrackCartRouteImport } from './routes/email.track.cart'
 import { Route as ApiOrdersCreateRouteImport } from './routes/api/orders.create'
 import { Route as ApiPublicWebhooksSendgridRouteImport } from './routes/api/public/webhooks/sendgrid'
 import { Route as ApiPublicHooksEmailMonthlyRouteImport } from './routes/api/public/hooks/email-monthly'
@@ -104,6 +105,11 @@ const EmailTrackShowroomRoute = EmailTrackShowroomRouteImport.update({
   path: '/email/track/showroom',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmailTrackCartRoute = EmailTrackCartRouteImport.update({
+  id: '/email/track/cart',
+  path: '/email/track/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOrdersCreateRoute = ApiOrdersCreateRouteImport.update({
   id: '/api/orders/create',
   path: '/api/orders/create',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/email/track/cart': typeof EmailTrackCartRoute
   '/email/track/showroom': typeof EmailTrackShowroomRoute
   '/email/track/whatsapp': typeof EmailTrackWhatsappRoute
   '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/email/track/cart': typeof EmailTrackCartRoute
   '/email/track/showroom': typeof EmailTrackShowroomRoute
   '/email/track/whatsapp': typeof EmailTrackWhatsappRoute
   '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/email/track/cart': typeof EmailTrackCartRoute
   '/email/track/showroom': typeof EmailTrackShowroomRoute
   '/email/track/whatsapp': typeof EmailTrackWhatsappRoute
   '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
@@ -208,6 +217,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/product/$id'
     | '/api/orders/create'
+    | '/email/track/cart'
     | '/email/track/showroom'
     | '/email/track/whatsapp'
     | '/api/public/hooks/email-cart'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/product/$id'
     | '/api/orders/create'
+    | '/email/track/cart'
     | '/email/track/showroom'
     | '/email/track/whatsapp'
     | '/api/public/hooks/email-cart'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/product/$id'
     | '/api/orders/create'
+    | '/email/track/cart'
     | '/email/track/showroom'
     | '/email/track/whatsapp'
     | '/api/public/hooks/email-cart'
@@ -272,6 +284,7 @@ export interface RootRouteChildren {
   CategorySlugRoute: typeof CategorySlugRoute
   ProductIdRoute: typeof ProductIdRoute
   ApiOrdersCreateRoute: typeof ApiOrdersCreateRoute
+  EmailTrackCartRoute: typeof EmailTrackCartRoute
   EmailTrackShowroomRoute: typeof EmailTrackShowroomRoute
   EmailTrackWhatsappRoute: typeof EmailTrackWhatsappRoute
   ApiPublicHooksEmailCartRoute: typeof ApiPublicHooksEmailCartRoute
@@ -386,6 +399,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmailTrackShowroomRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/email/track/cart': {
+      id: '/email/track/cart'
+      path: '/email/track/cart'
+      fullPath: '/email/track/cart'
+      preLoaderRoute: typeof EmailTrackCartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/orders/create': {
       id: '/api/orders/create'
       path: '/api/orders/create'
@@ -432,6 +452,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategorySlugRoute: CategorySlugRoute,
   ProductIdRoute: ProductIdRoute,
   ApiOrdersCreateRoute: ApiOrdersCreateRoute,
+  EmailTrackCartRoute: EmailTrackCartRoute,
   EmailTrackShowroomRoute: EmailTrackShowroomRoute,
   EmailTrackWhatsappRoute: EmailTrackWhatsappRoute,
   ApiPublicHooksEmailCartRoute: ApiPublicHooksEmailCartRoute,
