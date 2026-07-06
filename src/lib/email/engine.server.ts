@@ -32,7 +32,7 @@ export async function isAutomationPaused(schedulerName: string): Promise<boolean
 
 async function updateScheduler(name: string, patch: Record<string, any>) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await supabaseAdmin.from("scheduler_state").update(patch).eq("scheduler_name", name);
+  await supabaseAdmin.from("scheduler_state").update(patch as never).eq("scheduler_name", name);
 }
 
 // ----------------------------------------------------------------- logging
@@ -195,8 +195,8 @@ export async function runMonthly(): Promise<{ skipped?: string; campaignId?: str
   if (await isAutomationPaused("monthly")) return { skipped: "paused" };
 
   const state = await getSchedulerRow("monthly");
-  const usedTemplates: number[] = Array.isArray(state?.used_template_indexes) ? state!.used_template_indexes : [];
-  const usedCombos: string[] = Array.isArray(state?.used_product_combos) ? state!.used_product_combos : [];
+  const usedTemplates = (Array.isArray(state?.used_template_indexes) ? state!.used_template_indexes : []) as number[];
+  const usedCombos = (Array.isArray(state?.used_product_combos) ? state!.used_product_combos : []) as string[];
 
   const products = await pickMonthlyProducts(usedCombos);
   const tpl = await getMonthlyTemplateText(usedTemplates);
@@ -251,7 +251,7 @@ export async function runCart(): Promise<{ skipped?: string; campaignId?: string
   if (await isAutomationPaused("cart")) return { skipped: "paused" };
 
   const cartState = await getSchedulerRow("cart");
-  const usedTemplates: number[] = Array.isArray(cartState?.used_template_indexes) ? cartState!.used_template_indexes : [];
+  const usedTemplates = (Array.isArray(cartState?.used_template_indexes) ? cartState!.used_template_indexes : []) as number[];
   const tpl = await getCartTemplateText(usedTemplates);
 
   const { data: campaign } = await supabaseAdmin
