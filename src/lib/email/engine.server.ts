@@ -31,6 +31,7 @@ export async function isAutomationPaused(schedulerName: string): Promise<boolean
 }
 
 async function updateScheduler(name: string, patch: Record<string, any>) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await supabaseAdmin.from("scheduler_state").update(patch).eq("scheduler_name", name);
 }
 
