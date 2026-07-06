@@ -24,6 +24,7 @@ import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload-image'
 import { Route as ApiOrdersCreateRouteImport } from './routes/api/orders.create'
 import { Route as ApiPublicHooksEmailMonthlyRouteImport } from './routes/api/public/hooks/email-monthly'
+import { Route as ApiPublicHooksEmailCartRouteImport } from './routes/api/public/hooks/email-cart'
 
 const SystemLoginRoute = SystemLoginRouteImport.update({
   id: '/system-login',
@@ -101,6 +102,11 @@ const ApiPublicHooksEmailMonthlyRoute =
     path: '/api/public/hooks/email-monthly',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksEmailCartRoute = ApiPublicHooksEmailCartRouteImport.update({
+  id: '/api/public/hooks/email-cart',
+  path: '/api/public/hooks/email-cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
   '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
 }
 export interface FileRoutesByTo {
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
   '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
 }
 export interface FileRoutesById {
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
   '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
 }
 export interface FileRouteTypes {
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/product/$id'
     | '/api/orders/create'
+    | '/api/public/hooks/email-cart'
     | '/api/public/hooks/email-monthly'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/product/$id'
     | '/api/orders/create'
+    | '/api/public/hooks/email-cart'
     | '/api/public/hooks/email-monthly'
   id:
     | '__root__'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/product/$id'
     | '/api/orders/create'
+    | '/api/public/hooks/email-cart'
     | '/api/public/hooks/email-monthly'
   fileRoutesById: FileRoutesById
 }
@@ -223,6 +235,7 @@ export interface RootRouteChildren {
   CategorySlugRoute: typeof CategorySlugRoute
   ProductIdRoute: typeof ProductIdRoute
   ApiOrdersCreateRoute: typeof ApiOrdersCreateRoute
+  ApiPublicHooksEmailCartRoute: typeof ApiPublicHooksEmailCartRoute
   ApiPublicHooksEmailMonthlyRoute: typeof ApiPublicHooksEmailMonthlyRoute
 }
 
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksEmailMonthlyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/email-cart': {
+      id: '/api/public/hooks/email-cart'
+      path: '/api/public/hooks/email-cart'
+      fullPath: '/api/public/hooks/email-cart'
+      preLoaderRoute: typeof ApiPublicHooksEmailCartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -351,6 +371,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategorySlugRoute: CategorySlugRoute,
   ProductIdRoute: ProductIdRoute,
   ApiOrdersCreateRoute: ApiOrdersCreateRoute,
+  ApiPublicHooksEmailCartRoute: ApiPublicHooksEmailCartRoute,
   ApiPublicHooksEmailMonthlyRoute: ApiPublicHooksEmailMonthlyRoute,
 }
 export const routeTree = rootRouteImport
