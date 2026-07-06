@@ -22,6 +22,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload-image'
+import { Route as EmailTrackWhatsappRouteImport } from './routes/email.track.whatsapp'
 import { Route as ApiOrdersCreateRouteImport } from './routes/api/orders.create'
 import { Route as ApiPublicWebhooksSendgridRouteImport } from './routes/api/public/webhooks/sendgrid'
 import { Route as ApiPublicHooksEmailMonthlyRouteImport } from './routes/api/public/hooks/email-monthly'
@@ -92,6 +93,11 @@ const ApiUploadImageRoute = ApiUploadImageRouteImport.update({
   path: '/api/upload-image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmailTrackWhatsappRoute = EmailTrackWhatsappRouteImport.update({
+  id: '/email/track/whatsapp',
+  path: '/email/track/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOrdersCreateRoute = ApiOrdersCreateRouteImport.update({
   id: '/api/orders/create',
   path: '/api/orders/create',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/email/track/whatsapp': typeof EmailTrackWhatsappRoute
   '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
   '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
   '/api/public/webhooks/sendgrid': typeof ApiPublicWebhooksSendgridRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/email/track/whatsapp': typeof EmailTrackWhatsappRoute
   '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
   '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
   '/api/public/webhooks/sendgrid': typeof ApiPublicWebhooksSendgridRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/email/track/whatsapp': typeof EmailTrackWhatsappRoute
   '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
   '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
   '/api/public/webhooks/sendgrid': typeof ApiPublicWebhooksSendgridRoute
@@ -190,6 +199,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/product/$id'
     | '/api/orders/create'
+    | '/email/track/whatsapp'
     | '/api/public/hooks/email-cart'
     | '/api/public/hooks/email-monthly'
     | '/api/public/webhooks/sendgrid'
@@ -209,6 +219,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/product/$id'
     | '/api/orders/create'
+    | '/email/track/whatsapp'
     | '/api/public/hooks/email-cart'
     | '/api/public/hooks/email-monthly'
     | '/api/public/webhooks/sendgrid'
@@ -228,6 +239,7 @@ export interface FileRouteTypes {
     | '/category/$slug'
     | '/product/$id'
     | '/api/orders/create'
+    | '/email/track/whatsapp'
     | '/api/public/hooks/email-cart'
     | '/api/public/hooks/email-monthly'
     | '/api/public/webhooks/sendgrid'
@@ -248,6 +260,7 @@ export interface RootRouteChildren {
   CategorySlugRoute: typeof CategorySlugRoute
   ProductIdRoute: typeof ProductIdRoute
   ApiOrdersCreateRoute: typeof ApiOrdersCreateRoute
+  EmailTrackWhatsappRoute: typeof EmailTrackWhatsappRoute
   ApiPublicHooksEmailCartRoute: typeof ApiPublicHooksEmailCartRoute
   ApiPublicHooksEmailMonthlyRoute: typeof ApiPublicHooksEmailMonthlyRoute
   ApiPublicWebhooksSendgridRoute: typeof ApiPublicWebhooksSendgridRoute
@@ -346,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUploadImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/email/track/whatsapp': {
+      id: '/email/track/whatsapp'
+      path: '/email/track/whatsapp'
+      fullPath: '/email/track/whatsapp'
+      preLoaderRoute: typeof EmailTrackWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/orders/create': {
       id: '/api/orders/create'
       path: '/api/orders/create'
@@ -392,6 +412,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategorySlugRoute: CategorySlugRoute,
   ProductIdRoute: ProductIdRoute,
   ApiOrdersCreateRoute: ApiOrdersCreateRoute,
+  EmailTrackWhatsappRoute: EmailTrackWhatsappRoute,
   ApiPublicHooksEmailCartRoute: ApiPublicHooksEmailCartRoute,
   ApiPublicHooksEmailMonthlyRoute: ApiPublicHooksEmailMonthlyRoute,
   ApiPublicWebhooksSendgridRoute: ApiPublicWebhooksSendgridRoute,
