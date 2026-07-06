@@ -23,6 +23,7 @@ import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload-image'
 import { Route as ApiOrdersCreateRouteImport } from './routes/api/orders.create'
+import { Route as ApiPublicWebhooksSendgridRouteImport } from './routes/api/public/webhooks/sendgrid'
 import { Route as ApiPublicHooksEmailMonthlyRouteImport } from './routes/api/public/hooks/email-monthly'
 import { Route as ApiPublicHooksEmailCartRouteImport } from './routes/api/public/hooks/email-cart'
 
@@ -96,6 +97,12 @@ const ApiOrdersCreateRoute = ApiOrdersCreateRouteImport.update({
   path: '/api/orders/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWebhooksSendgridRoute =
+  ApiPublicWebhooksSendgridRouteImport.update({
+    id: '/api/public/webhooks/sendgrid',
+    path: '/api/public/webhooks/sendgrid',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksEmailMonthlyRoute =
   ApiPublicHooksEmailMonthlyRouteImport.update({
     id: '/api/public/hooks/email-monthly',
@@ -125,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/api/orders/create': typeof ApiOrdersCreateRoute
   '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
   '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
+  '/api/public/webhooks/sendgrid': typeof ApiPublicWebhooksSendgridRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -143,6 +151,7 @@ export interface FileRoutesByTo {
   '/api/orders/create': typeof ApiOrdersCreateRoute
   '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
   '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
+  '/api/public/webhooks/sendgrid': typeof ApiPublicWebhooksSendgridRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -162,6 +171,7 @@ export interface FileRoutesById {
   '/api/orders/create': typeof ApiOrdersCreateRoute
   '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
   '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
+  '/api/public/webhooks/sendgrid': typeof ApiPublicWebhooksSendgridRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/api/orders/create'
     | '/api/public/hooks/email-cart'
     | '/api/public/hooks/email-monthly'
+    | '/api/public/webhooks/sendgrid'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -200,6 +211,7 @@ export interface FileRouteTypes {
     | '/api/orders/create'
     | '/api/public/hooks/email-cart'
     | '/api/public/hooks/email-monthly'
+    | '/api/public/webhooks/sendgrid'
   id:
     | '__root__'
     | '/'
@@ -218,6 +230,7 @@ export interface FileRouteTypes {
     | '/api/orders/create'
     | '/api/public/hooks/email-cart'
     | '/api/public/hooks/email-monthly'
+    | '/api/public/webhooks/sendgrid'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -237,6 +250,7 @@ export interface RootRouteChildren {
   ApiOrdersCreateRoute: typeof ApiOrdersCreateRoute
   ApiPublicHooksEmailCartRoute: typeof ApiPublicHooksEmailCartRoute
   ApiPublicHooksEmailMonthlyRoute: typeof ApiPublicHooksEmailMonthlyRoute
+  ApiPublicWebhooksSendgridRoute: typeof ApiPublicWebhooksSendgridRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -339,6 +353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOrdersCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/webhooks/sendgrid': {
+      id: '/api/public/webhooks/sendgrid'
+      path: '/api/public/webhooks/sendgrid'
+      fullPath: '/api/public/webhooks/sendgrid'
+      preLoaderRoute: typeof ApiPublicWebhooksSendgridRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/email-monthly': {
       id: '/api/public/hooks/email-monthly'
       path: '/api/public/hooks/email-monthly'
@@ -373,6 +394,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOrdersCreateRoute: ApiOrdersCreateRoute,
   ApiPublicHooksEmailCartRoute: ApiPublicHooksEmailCartRoute,
   ApiPublicHooksEmailMonthlyRoute: ApiPublicHooksEmailMonthlyRoute,
+  ApiPublicWebhooksSendgridRoute: ApiPublicWebhooksSendgridRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
