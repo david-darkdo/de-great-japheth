@@ -26,6 +26,7 @@ import { Route as EmailTrackWhatsappRouteImport } from './routes/email.track.wha
 import { Route as EmailTrackShowroomRouteImport } from './routes/email.track.showroom'
 import { Route as EmailTrackCartRouteImport } from './routes/email.track.cart'
 import { Route as ApiOrdersCreateRouteImport } from './routes/api/orders.create'
+import { Route as ApiEmailAdminRouteImport } from './routes/api/email/admin'
 import { Route as ApiPublicWebhooksSendgridRouteImport } from './routes/api/public/webhooks/sendgrid'
 import { Route as ApiPublicHooksEmailMonthlyRouteImport } from './routes/api/public/hooks/email-monthly'
 import { Route as ApiPublicHooksEmailCartRouteImport } from './routes/api/public/hooks/email-cart'
@@ -115,6 +116,11 @@ const ApiOrdersCreateRoute = ApiOrdersCreateRouteImport.update({
   path: '/api/orders/create',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiEmailAdminRoute = ApiEmailAdminRouteImport.update({
+  id: '/api/email/admin',
+  path: '/api/email/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWebhooksSendgridRoute =
   ApiPublicWebhooksSendgridRouteImport.update({
     id: '/api/public/webhooks/sendgrid',
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/api/upload-image': typeof ApiUploadImageRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/api/email/admin': typeof ApiEmailAdminRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
   '/email/track/cart': typeof EmailTrackCartRoute
   '/email/track/showroom': typeof EmailTrackShowroomRoute
@@ -169,6 +176,7 @@ export interface FileRoutesByTo {
   '/api/upload-image': typeof ApiUploadImageRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/api/email/admin': typeof ApiEmailAdminRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
   '/email/track/cart': typeof EmailTrackCartRoute
   '/email/track/showroom': typeof EmailTrackShowroomRoute
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/api/upload-image': typeof ApiUploadImageRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/api/email/admin': typeof ApiEmailAdminRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
   '/email/track/cart': typeof EmailTrackCartRoute
   '/email/track/showroom': typeof EmailTrackShowroomRoute
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | '/api/upload-image'
     | '/category/$slug'
     | '/product/$id'
+    | '/api/email/admin'
     | '/api/orders/create'
     | '/email/track/cart'
     | '/email/track/showroom'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/api/upload-image'
     | '/category/$slug'
     | '/product/$id'
+    | '/api/email/admin'
     | '/api/orders/create'
     | '/email/track/cart'
     | '/email/track/showroom'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/api/upload-image'
     | '/category/$slug'
     | '/product/$id'
+    | '/api/email/admin'
     | '/api/orders/create'
     | '/email/track/cart'
     | '/email/track/showroom'
@@ -283,6 +295,7 @@ export interface RootRouteChildren {
   ApiUploadImageRoute: typeof ApiUploadImageRoute
   CategorySlugRoute: typeof CategorySlugRoute
   ProductIdRoute: typeof ProductIdRoute
+  ApiEmailAdminRoute: typeof ApiEmailAdminRoute
   ApiOrdersCreateRoute: typeof ApiOrdersCreateRoute
   EmailTrackCartRoute: typeof EmailTrackCartRoute
   EmailTrackShowroomRoute: typeof EmailTrackShowroomRoute
@@ -413,6 +426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOrdersCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/email/admin': {
+      id: '/api/email/admin'
+      path: '/api/email/admin'
+      fullPath: '/api/email/admin'
+      preLoaderRoute: typeof ApiEmailAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/sendgrid': {
       id: '/api/public/webhooks/sendgrid'
       path: '/api/public/webhooks/sendgrid'
@@ -451,6 +471,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUploadImageRoute: ApiUploadImageRoute,
   CategorySlugRoute: CategorySlugRoute,
   ProductIdRoute: ProductIdRoute,
+  ApiEmailAdminRoute: ApiEmailAdminRoute,
   ApiOrdersCreateRoute: ApiOrdersCreateRoute,
   EmailTrackCartRoute: EmailTrackCartRoute,
   EmailTrackShowroomRoute: EmailTrackShowroomRoute,
