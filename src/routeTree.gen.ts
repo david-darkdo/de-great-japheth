@@ -22,7 +22,14 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload-image'
+import { Route as EmailTrackWhatsappRouteImport } from './routes/email.track.whatsapp'
+import { Route as EmailTrackShowroomRouteImport } from './routes/email.track.showroom'
+import { Route as EmailTrackCartRouteImport } from './routes/email.track.cart'
 import { Route as ApiOrdersCreateRouteImport } from './routes/api/orders.create'
+import { Route as ApiEmailAdminRouteImport } from './routes/api/email/admin'
+import { Route as ApiPublicWebhooksSendgridRouteImport } from './routes/api/public/webhooks/sendgrid'
+import { Route as ApiPublicHooksEmailMonthlyRouteImport } from './routes/api/public/hooks/email-monthly'
+import { Route as ApiPublicHooksEmailCartRouteImport } from './routes/api/public/hooks/email-cart'
 
 const SystemLoginRoute = SystemLoginRouteImport.update({
   id: '/system-login',
@@ -89,9 +96,46 @@ const ApiUploadImageRoute = ApiUploadImageRouteImport.update({
   path: '/api/upload-image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmailTrackWhatsappRoute = EmailTrackWhatsappRouteImport.update({
+  id: '/email/track/whatsapp',
+  path: '/email/track/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailTrackShowroomRoute = EmailTrackShowroomRouteImport.update({
+  id: '/email/track/showroom',
+  path: '/email/track/showroom',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailTrackCartRoute = EmailTrackCartRouteImport.update({
+  id: '/email/track/cart',
+  path: '/email/track/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOrdersCreateRoute = ApiOrdersCreateRouteImport.update({
   id: '/api/orders/create',
   path: '/api/orders/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEmailAdminRoute = ApiEmailAdminRouteImport.update({
+  id: '/api/email/admin',
+  path: '/api/email/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWebhooksSendgridRoute =
+  ApiPublicWebhooksSendgridRouteImport.update({
+    id: '/api/public/webhooks/sendgrid',
+    path: '/api/public/webhooks/sendgrid',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksEmailMonthlyRoute =
+  ApiPublicHooksEmailMonthlyRouteImport.update({
+    id: '/api/public/hooks/email-monthly',
+    path: '/api/public/hooks/email-monthly',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksEmailCartRoute = ApiPublicHooksEmailCartRouteImport.update({
+  id: '/api/public/hooks/email-cart',
+  path: '/api/public/hooks/email-cart',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -109,7 +153,14 @@ export interface FileRoutesByFullPath {
   '/api/upload-image': typeof ApiUploadImageRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/api/email/admin': typeof ApiEmailAdminRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/email/track/cart': typeof EmailTrackCartRoute
+  '/email/track/showroom': typeof EmailTrackShowroomRoute
+  '/email/track/whatsapp': typeof EmailTrackWhatsappRoute
+  '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
+  '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
+  '/api/public/webhooks/sendgrid': typeof ApiPublicWebhooksSendgridRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -125,7 +176,14 @@ export interface FileRoutesByTo {
   '/api/upload-image': typeof ApiUploadImageRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/api/email/admin': typeof ApiEmailAdminRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/email/track/cart': typeof EmailTrackCartRoute
+  '/email/track/showroom': typeof EmailTrackShowroomRoute
+  '/email/track/whatsapp': typeof EmailTrackWhatsappRoute
+  '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
+  '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
+  '/api/public/webhooks/sendgrid': typeof ApiPublicWebhooksSendgridRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -142,7 +200,14 @@ export interface FileRoutesById {
   '/api/upload-image': typeof ApiUploadImageRoute
   '/category/$slug': typeof CategorySlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/api/email/admin': typeof ApiEmailAdminRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
+  '/email/track/cart': typeof EmailTrackCartRoute
+  '/email/track/showroom': typeof EmailTrackShowroomRoute
+  '/email/track/whatsapp': typeof EmailTrackWhatsappRoute
+  '/api/public/hooks/email-cart': typeof ApiPublicHooksEmailCartRoute
+  '/api/public/hooks/email-monthly': typeof ApiPublicHooksEmailMonthlyRoute
+  '/api/public/webhooks/sendgrid': typeof ApiPublicWebhooksSendgridRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -160,7 +225,14 @@ export interface FileRouteTypes {
     | '/api/upload-image'
     | '/category/$slug'
     | '/product/$id'
+    | '/api/email/admin'
     | '/api/orders/create'
+    | '/email/track/cart'
+    | '/email/track/showroom'
+    | '/email/track/whatsapp'
+    | '/api/public/hooks/email-cart'
+    | '/api/public/hooks/email-monthly'
+    | '/api/public/webhooks/sendgrid'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -176,7 +248,14 @@ export interface FileRouteTypes {
     | '/api/upload-image'
     | '/category/$slug'
     | '/product/$id'
+    | '/api/email/admin'
     | '/api/orders/create'
+    | '/email/track/cart'
+    | '/email/track/showroom'
+    | '/email/track/whatsapp'
+    | '/api/public/hooks/email-cart'
+    | '/api/public/hooks/email-monthly'
+    | '/api/public/webhooks/sendgrid'
   id:
     | '__root__'
     | '/'
@@ -192,7 +271,14 @@ export interface FileRouteTypes {
     | '/api/upload-image'
     | '/category/$slug'
     | '/product/$id'
+    | '/api/email/admin'
     | '/api/orders/create'
+    | '/email/track/cart'
+    | '/email/track/showroom'
+    | '/email/track/whatsapp'
+    | '/api/public/hooks/email-cart'
+    | '/api/public/hooks/email-monthly'
+    | '/api/public/webhooks/sendgrid'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -209,7 +295,14 @@ export interface RootRouteChildren {
   ApiUploadImageRoute: typeof ApiUploadImageRoute
   CategorySlugRoute: typeof CategorySlugRoute
   ProductIdRoute: typeof ProductIdRoute
+  ApiEmailAdminRoute: typeof ApiEmailAdminRoute
   ApiOrdersCreateRoute: typeof ApiOrdersCreateRoute
+  EmailTrackCartRoute: typeof EmailTrackCartRoute
+  EmailTrackShowroomRoute: typeof EmailTrackShowroomRoute
+  EmailTrackWhatsappRoute: typeof EmailTrackWhatsappRoute
+  ApiPublicHooksEmailCartRoute: typeof ApiPublicHooksEmailCartRoute
+  ApiPublicHooksEmailMonthlyRoute: typeof ApiPublicHooksEmailMonthlyRoute
+  ApiPublicWebhooksSendgridRoute: typeof ApiPublicWebhooksSendgridRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -305,11 +398,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUploadImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/email/track/whatsapp': {
+      id: '/email/track/whatsapp'
+      path: '/email/track/whatsapp'
+      fullPath: '/email/track/whatsapp'
+      preLoaderRoute: typeof EmailTrackWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email/track/showroom': {
+      id: '/email/track/showroom'
+      path: '/email/track/showroom'
+      fullPath: '/email/track/showroom'
+      preLoaderRoute: typeof EmailTrackShowroomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email/track/cart': {
+      id: '/email/track/cart'
+      path: '/email/track/cart'
+      fullPath: '/email/track/cart'
+      preLoaderRoute: typeof EmailTrackCartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/orders/create': {
       id: '/api/orders/create'
       path: '/api/orders/create'
       fullPath: '/api/orders/create'
       preLoaderRoute: typeof ApiOrdersCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/email/admin': {
+      id: '/api/email/admin'
+      path: '/api/email/admin'
+      fullPath: '/api/email/admin'
+      preLoaderRoute: typeof ApiEmailAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/sendgrid': {
+      id: '/api/public/webhooks/sendgrid'
+      path: '/api/public/webhooks/sendgrid'
+      fullPath: '/api/public/webhooks/sendgrid'
+      preLoaderRoute: typeof ApiPublicWebhooksSendgridRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/email-monthly': {
+      id: '/api/public/hooks/email-monthly'
+      path: '/api/public/hooks/email-monthly'
+      fullPath: '/api/public/hooks/email-monthly'
+      preLoaderRoute: typeof ApiPublicHooksEmailMonthlyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/email-cart': {
+      id: '/api/public/hooks/email-cart'
+      path: '/api/public/hooks/email-cart'
+      fullPath: '/api/public/hooks/email-cart'
+      preLoaderRoute: typeof ApiPublicHooksEmailCartRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -329,7 +471,14 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUploadImageRoute: ApiUploadImageRoute,
   CategorySlugRoute: CategorySlugRoute,
   ProductIdRoute: ProductIdRoute,
+  ApiEmailAdminRoute: ApiEmailAdminRoute,
   ApiOrdersCreateRoute: ApiOrdersCreateRoute,
+  EmailTrackCartRoute: EmailTrackCartRoute,
+  EmailTrackShowroomRoute: EmailTrackShowroomRoute,
+  EmailTrackWhatsappRoute: EmailTrackWhatsappRoute,
+  ApiPublicHooksEmailCartRoute: ApiPublicHooksEmailCartRoute,
+  ApiPublicHooksEmailMonthlyRoute: ApiPublicHooksEmailMonthlyRoute,
+  ApiPublicWebhooksSendgridRoute: ApiPublicWebhooksSendgridRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
