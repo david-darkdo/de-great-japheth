@@ -38,6 +38,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_email_progress: {
+        Row: {
+          created_at: string
+          current_product_index: number
+          id: string
+          last_sent_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_product_index?: number
+          id?: string
+          last_sent_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_product_index?: number
+          id?: string
+          last_sent_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           created_at: string
@@ -68,6 +95,125 @@ export type Database = {
           phone?: string | null
           provider?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      email_campaigns: {
+        Row: {
+          audience: string
+          banner_image: string | null
+          body: string | null
+          campaign_type: string
+          created_at: string
+          created_by: string | null
+          failed_count: number
+          id: string
+          product_ids: string[]
+          selected_user_ids: string[]
+          sent_count: number
+          status: string
+          template_type: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          banner_image?: string | null
+          body?: string | null
+          campaign_type: string
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          id?: string
+          product_ids?: string[]
+          selected_user_ids?: string[]
+          sent_count?: number
+          status?: string
+          template_type?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          banner_image?: string | null
+          body?: string | null
+          campaign_type?: string
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          id?: string
+          product_ids?: string[]
+          selected_user_ids?: string[]
+          sent_count?: number
+          status?: string
+          template_type?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_logs: {
+        Row: {
+          campaign_id: string | null
+          email: string | null
+          event_at: string
+          id: string
+          metadata: Json
+          provider_message_id: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          email?: string | null
+          event_at?: string
+          id?: string
+          metadata?: Json
+          provider_message_id?: string | null
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          email?: string | null
+          event_at?: string
+          id?: string
+          metadata?: Json
+          provider_message_id?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          created_at: string
+          id: string
+          template_content: string
+          template_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          template_content?: string
+          template_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          template_content?: string
+          template_type?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -197,6 +343,54 @@ export type Database = {
           preferred_contact?: string | null
           project_type?: string | null
           state?: string | null
+        }
+        Relationships: []
+      }
+      scheduler_state: {
+        Row: {
+          automation_status: string
+          cart_reminder_index: number
+          created_at: string
+          current_product_index: number
+          current_template_index: number
+          id: string
+          last_execution: string | null
+          meta: Json
+          next_execution: string | null
+          scheduler_name: string
+          updated_at: string
+          used_product_combos: Json
+          used_template_indexes: Json
+        }
+        Insert: {
+          automation_status?: string
+          cart_reminder_index?: number
+          created_at?: string
+          current_product_index?: number
+          current_template_index?: number
+          id?: string
+          last_execution?: string | null
+          meta?: Json
+          next_execution?: string | null
+          scheduler_name: string
+          updated_at?: string
+          used_product_combos?: Json
+          used_template_indexes?: Json
+        }
+        Update: {
+          automation_status?: string
+          cart_reminder_index?: number
+          created_at?: string
+          current_product_index?: number
+          current_template_index?: number
+          id?: string
+          last_execution?: string | null
+          meta?: Json
+          next_execution?: string | null
+          scheduler_name?: string
+          updated_at?: string
+          used_product_combos?: Json
+          used_template_indexes?: Json
         }
         Relationships: []
       }
