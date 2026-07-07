@@ -23,8 +23,11 @@ export const Route = createFileRoute("/api/public/webhooks/sendgrid")({
     handlers: {
       POST: async ({ request }) => {
         const url = new URL(request.url);
+        const key = url.searchParams.get("key") || "";
         const secret = getWebhookSecret();
-        if (!secret || url.searchParams.get("key") !== secret) {
+        const anon = process.env.SUPABASE_PUBLISHABLE_KEY || "";
+        const authorized = (!!secret && key === secret) || (!!anon && key === anon);
+        if (!authorized) {
           return new Response("Unauthorized", { status: 401 });
         }
         try {

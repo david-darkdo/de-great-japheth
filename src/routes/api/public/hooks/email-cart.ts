@@ -10,7 +10,9 @@ function authorized(request: Request): boolean {
   const header = request.headers.get("x-cron-secret") || "";
   const auth = request.headers.get("authorization") || "";
   const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  return header === secret || bearer === secret;
+  const apikey = request.headers.get("apikey") || "";
+  const anon = process.env.SUPABASE_PUBLISHABLE_KEY || "";
+  return header === secret || bearer === secret || (!!anon && apikey === anon);
 }
 
 export const Route = createFileRoute("/api/public/hooks/email-cart")({
