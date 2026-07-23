@@ -5,14 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
 import { ProductCard } from "@/routes/showroom";
 import { cart } from "@/lib/cart";
+import { getProductUrl, getPublicUrl } from "@/lib/url";
 
 export const Route = createFileRoute("/product/$id")({
   head: ({ loaderData }: any) => {
     const prod = loaderData;
     const title = prod?.product_name ? `${prod.product_name} | DE GREAT JAPHET` : "Product | DE GREAT JAPHET";
     const desc = prod?.full_details || "Premium building materials and finishing for modern interiors by De Great Japhet.";
-    const img = prod?.product_image || "https://great-japhet.vercel.app/hero-interior.jpg";
-    const canonical = `https://great-japhet.vercel.app/product/${prod?.id || ""}`;
+    const img = prod?.product_image || getPublicUrl("/hero-interior.jpg");
+    const canonical = getProductUrl(prod?.id || "");
 
     return {
       meta: [
@@ -125,26 +126,10 @@ function ProductPage() {
     );
   }
 
-  const productUrl = `https://great-japhet.vercel.app/product/${product.id}`;
+  const productUrl = getProductUrl(product.id);
   const formattedPrice = product.price != null ? `₦${Number(product.price).toLocaleString()}` : "Price on Request";
 
-  const waMessage = `Hello Great Japhet,
-
-I am interested in this product.
-
-Product:
-${product.product_name}
-
-Price:
-${formattedPrice}
-
-Product Link:
-${productUrl}
-
-Please confirm availability.
-
-Thank you.`;
-
+  const waMessage = `Hello Great Japhet,\n\nI am interested in this product.\n\nProduct:\n${product.product_name}\n\nPrice:\n${formattedPrice}\n\nProduct Link:\n${productUrl}\n\nPlease confirm availability.\n\nThank you.`;
   const waUrl = `https://wa.me/2347066786626?text=${encodeURIComponent(waMessage)}`;
 
   // JSON-LD Structured Data Schema for Google Indexing
