@@ -1,12 +1,21 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
 import { CATEGORIES, categorySlug } from "@/lib/categories";
 import { cart } from "@/lib/cart";
 
+type SearchParams = {
+  q?: string;
+  category?: string;
+};
+
 export const Route = createFileRoute("/showroom")({
+  validateSearch: (search: Record<string, unknown>): SearchParams => ({
+    q: typeof search.q === "string" ? search.q : undefined,
+    category: typeof search.category === "string" ? search.category : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Showroom — DE GREAT JAPHET" },
@@ -24,17 +33,30 @@ type Product = {
   product_image: string | null;
   price: number | null;
   item_code?: string | null;
+  family?: string | null;
+  full_details?: string | null;
+  search_keywords?: string | null;
+  search_tags?: string | null;
+  brand?: string | null;
 };
 
 function ShowroomPage() {
+  const navigate = useNavigate();
+  const searchParams = useSearch({ from: "/showroom" });
   const [products, setProducts] = useState<Product[]>([]);
-  const [active, setActive] = useState<string>("All");
+  const [activeCategory, setActiveCategory] = useState<string>(searchParams.category || "All");
+  const [searchQuery, setSearchQuery] = useState<string>(searchParams.q || "");
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (searchParams.q !== undefined) setSearchQuery(searchParams.q);
+    if (searchParams.category !== undefined) setActiveCategory(searchParams.category);
+  }, [searchParams.q, searchParams.category]);
 
   useEffect(() => {
     supabase
       .from("products")
-      .select("id, product_name, category, product_type, product_image, price, item_code")
+      .select("id, product_name, category, product_type, product_image, price, item_code, family, full_details, search_keywords, search_tags, brand")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setProducts((data as Product[]) || []);
@@ -42,22 +64,73 @@ function ShowroomPage() {
       });
   }, []);
 
-  const filtered = useMemo(
-    () => (active === "All" ? products : products.filter((p) => p.category === active)),
-    [products, active]
-  );
+  const filtered = useMemo(() => {
+    return products.filter((p) => {
+      const matchesCategory = activeCategory === "All" || p.category === activeCategory;
+      if (!matchesCategory) return false;
+
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      const nameMatch = (p.product_name || "").toLowerCase().includes(q);
+      const catMatch = (p.category || "").toLowerCase().includes(q);
+      const familyMatch = (p.family || "").toLowerCase().includes(q);
+      const detailsMatch = (p.full_details || "").toLowerCase().includes(q);
+      const kwMatch = (p.search_keywords || "").toLowerCase().includes(q);
+      const tagMatch = (p.search_tags || "").toLowerCase().includes(q);
+      const brandMatch = (p.brand || "").toLowerCase().includes(q);
+      const codeMatch = (p.item_code || "").toLowerCase().includes(q);
+
+      return nameMatch || catMatch || familyMatch || detailsMatch || kwMatch || tagMatch || brandMatch || codeMatch;
+    });
+  }, [products, activeCategory, searchQuery]);
 
   return (
     <SiteLayout>
       <section className="relative overflow-hidden border-b border-[oklch(0.82_0.14_86/0.15)]">
         <div className="absolute inset-0 bg-gradient-blue opacity-60" />
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-[oklch(0.82_0.14_86/0.12)] blur-3xl animate-[float_8s_ease-in-out_infinite]" />
-        <div className="relative max-w-7xl mx-auto px-4 py-12 md:py-20 animate-[fade-up_.7s_ease-out_both]">
+        <div className="relative max-w-7xl mx-auto px-4 py-10 md:py-16 animate-[fade-up_.7s_ease-out_both]">
           <p className="text-xs tracking-[0.3em] text-gold uppercase mb-2">Showroom</p>
           <h1 className="font-display text-4xl md:text-5xl font-bold text-shimmer">Explore Our Collection</h1>
-          <p className="mt-3 text-muted-foreground max-w-2xl">
-            Discover premium materials across every finishing category. Tap to add to your selection — send everything together on WhatsApp.
+          <p className="mt-3 text-muted-foreground max-w-2xl text-sm md:text-base">
+            Discover premium building materials across every category. Tap to add to your selection — send everything together on WhatsApp.
           </p>
+
+          {/* Search Bar UI */}
+          <div className="mt-6 max-w-2xl relative">
+            <div className="relative flex items-center">
+              <Search className="absolute left-4 text-gold" size={20} />
+              <input
+                type="text"
+                placeholder="Search products by name, keywords, brand, doors, tiles, electrical..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  navigate({
+                    to: "/showroom",
+                    search: (prev) => ({ ...prev, q: e.target.value || undefined }),
+                    replace: true,
+                  });
+                }}
+                className="w-full pl-12 pr-10 py-3.5 rounded-2xl glass border border-[oklch(0.82_0.14_86/0.25)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold transition-all shadow-gold"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    navigate({
+                      to: "/showroom",
+                      search: (prev) => ({ ...prev, q: undefined }),
+                      replace: true,
+                    });
+                  }}
+                  className="absolute right-4 text-muted-foreground hover:text-gold transition"
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -68,9 +141,16 @@ function ShowroomPage() {
             {(["All", ...CATEGORIES] as const).map((c) => (
               <button
                 key={c}
-                onClick={() => setActive(c)}
+                onClick={() => {
+                  setActiveCategory(c);
+                  navigate({
+                    to: "/showroom",
+                    search: (prev) => ({ ...prev, category: c === "All" ? undefined : c }),
+                    replace: true,
+                  });
+                }}
                 className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                  active === c
+                  activeCategory === c
                     ? "bg-gradient-gold text-[var(--cta-foreground)] border-transparent shadow-gold"
                     : "bg-background/40 text-muted-foreground border-border hover:border-gold hover:text-gold"
                 }`}
@@ -84,13 +164,29 @@ function ShowroomPage() {
 
       <section className="max-w-7xl mx-auto px-4 py-8 md:py-12">
         {loading ? (
-          <p className="text-muted-foreground">Loading products...</p>
+          <p className="text-muted-foreground text-center py-16">Loading products...</p>
         ) : filtered.length === 0 ? (
-          <p className="text-muted-foreground text-center py-16">No products in this category yet.</p>
+          <div className="text-center py-16 glass rounded-2xl p-8 max-w-md mx-auto">
+            <Search className="mx-auto text-muted-foreground mb-3" size={32} />
+            <p className="text-foreground font-medium">No products found</p>
+            <p className="text-xs text-muted-foreground mt-1">Try clearing your search query or selecting a different category.</p>
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setActiveCategory("All");
+                  navigate({ to: "/showroom", search: {}, replace: true });
+                }}
+                className="mt-4 btn-outline-gold text-xs"
+              >
+                Reset Filters
+              </button>
+            )}
+          </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {filtered.map((p, i) => (
-              <div key={p.id} className="animate-[fade-up_.5s_ease-out_both]" style={{ animationDelay: `${i * 50}ms` }}>
+              <div key={p.id} className="animate-[fade-up_.5s_ease-out_both]" style={{ animationDelay: `${i * 40}ms` }}>
                 <ProductCard p={p} />
               </div>
             ))}
