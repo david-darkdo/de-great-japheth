@@ -6,7 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function BottomNav() {
   const { location } = useRouterState();
-  const path = location.pathname;
+  const rawPath = location.pathname || "/";
+  const path = (rawPath === "/" || rawPath === "") ? "/" : rawPath.replace(/\/$/, "");
+  
   const items = useCart();
   const count = items.reduce((s, x) => s + x.qty, 0);
 
@@ -41,7 +43,7 @@ export function BottomNav() {
   const signOut = async () => { await supabase.auth.signOut(); setAccountOpen(false); };
 
   // Explicit, mutually exclusive active route checks
-  const isHome = path === "/";
+  const isHome = path === "/" || path === "/home";
   const isShowroom = path === "/showroom";
   const isContact = path === "/contact";
   const isCart = path === "/cart" || path === "/orders";
@@ -144,7 +146,7 @@ export function BottomNav() {
               <span className={`mt-1 text-[10px] font-semibold tracking-wide ${isShowroom ? "text-gold" : "text-muted-foreground"}`}>
                 SHOWROOM
               </span>
-            </a>
+            </Link>
           </div>
 
           {/* Cart Tab */}
