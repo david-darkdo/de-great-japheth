@@ -61,9 +61,10 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
               <Link
                 key={n.to}
                 to={n.to}
+                preload="intent"
+                activeOptions={{ exact: n.to === "/" }}
                 className="relative text-sm font-medium text-muted-foreground hover:text-gold transition-colors after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-full after:scale-x-0 after:origin-left after:bg-[var(--gold)] after:transition-transform hover:after:scale-x-100"
                 activeProps={{ className: "text-gold after:scale-x-100" }}
-                activeOptions={{ exact: n.to === "/" }}
               >
                 {n.label}
               </Link>
@@ -138,6 +139,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={n.to}
                   to={n.to}
+                  activeOptions={{ exact: n.to === "/" }}
                   className="py-3 text-base text-foreground border-b border-border last:border-0 hover:text-gold transition"
                 >
                   {n.label}
