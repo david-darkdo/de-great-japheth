@@ -118,6 +118,7 @@ export function BottomNav() {
           {/* Contact Tab */}
           <Link
             to="/contact"
+            activeOptions={{ exact: true }}
             className="relative flex flex-col items-center justify-center gap-0.5 h-full"
           >
             <span className={`relative transition-colors ${isContact ? "text-gold" : "text-muted-foreground"}`}>
@@ -132,6 +133,7 @@ export function BottomNav() {
           <div className="flex justify-center">
             <Link
               to="/showroom"
+              activeOptions={{ exact: true }}
               aria-label="Showroom"
               className="group relative -mt-9 flex flex-col items-center"
             >
@@ -151,6 +153,7 @@ export function BottomNav() {
           {/* Cart Tab */}
           <Link
             to="/cart"
+            activeOptions={{ exact: true }}
             className="relative flex flex-col items-center justify-center gap-0.5 h-full"
           >
             <span className={`relative transition-colors ${isCart ? "text-gold" : "text-muted-foreground"}`}>
@@ -195,6 +198,7 @@ function PanelLink({
     <Link
       to={to}
       search={search}
+      activeOptions={{ exact: true }}
       className={`flex items-center gap-3 px-3 py-3 text-sm transition rounded-lg ${
         gold ? "text-gold hover:text-gold/80" : "text-foreground hover:text-gold"
       }`}
