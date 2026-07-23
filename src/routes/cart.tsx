@@ -13,23 +13,24 @@ export const Route = createFileRoute("/cart")({
 const WA = "2347066786626";
 
 function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
+  const collectionUrl = `https://great-japhet.vercel.app/collection/${orderCode}`;
+  const total = items.reduce((s, x) => s + (x.price ?? 0) * x.qty, 0);
+
   const lines: string[] = [];
-  lines.push("Hello DE GREAT JAPHET 👋");
+  lines.push("Hello Great Japhet,");
   lines.push("");
-  lines.push(`ORDER CODE: ${orderCode}`);
+  lines.push("I am interested in this collection.");
   lines.push("");
-  lines.push("Selected Products:");
+  lines.push("Collection Link:");
+  lines.push(collectionUrl);
   lines.push("");
-  items.forEach((it, i) => {
-    const code = it.item_code ? ` (Code: ${it.item_code})` : "";
-    const cat = it.category ? ` — ${it.category}` : "";
-    const price = it.price != null ? ` — ₦${Number(it.price).toLocaleString()}` : "";
-    lines.push(`${i + 1}. ${it.product_name}${cat}${code}${price}`);
-    const note = (it.note || "").trim();
-    if (note) lines.push(`   Request: ${note}`);
-    lines.push("");
-  });
-  lines.push("Please confirm availability and assist me with pricing and delivery.");
+  lines.push(`Order Code: ${orderCode}`);
+  lines.push(`Items Selected: ${items.length}`);
+  if (total > 0) lines.push(`Estimated Total: ₦${total.toLocaleString()}`);
+  lines.push("");
+  lines.push("Please confirm availability and assist me with delivery and installation.");
+  lines.push("");
+  lines.push("Thank you.");
   return lines.join("\n");
 }
 
@@ -74,10 +75,9 @@ function CartPage() {
       const message = buildNarrative(items, json.order_code);
       const url = `https://wa.me/${WA}?text=${encodeURIComponent(message)}`;
       cart.clear();
-      // Open in a new tab so the preview iframe / current page isn't navigated away to a blank state.
+      
       const win = window.open(url, "_blank", "noopener,noreferrer");
       if (!win) {
-        // Popup blocked — fall back to top-level navigation (escapes iframes).
         try { (window.top ?? window).location.href = url; }
         catch { window.location.href = url; }
       }
@@ -186,7 +186,7 @@ function CartPage() {
                 </div>
               )}
               <p className="mt-3 text-xs text-muted-foreground">
-                Final price confirmed on WhatsApp. We'll send the full list with names and images of each item.
+                Final price confirmed on WhatsApp. We'll send your shareable Collection Quote link.
               </p>
               <button
                 type="button"
