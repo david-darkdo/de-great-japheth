@@ -28,7 +28,7 @@ export const Route = createFileRoute("/home")({
   component: HomePage,
 });
 
-function HomePage() {
+export function HomePage() {
   return (
     <SiteLayout>
       {/* Hero */}
