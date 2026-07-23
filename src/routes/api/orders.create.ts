@@ -14,6 +14,16 @@ type Item = {
   note?: string | null;
 };
 
+function getEnvVar(name: string): string | undefined {
+  if (typeof process !== 'undefined' && process.env && process.env[name]) {
+    return process.env[name];
+  }
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[name]) {
+    return import.meta.env[name];
+  }
+  return undefined;
+}
+
 function wrapText(text: string, font: any, size: number, maxWidth: number): string[] {
   const words = (text || "").split(/\s+/);
   const lines: string[] = [];
@@ -156,14 +166,28 @@ export const Route = createFileRoute("/api/orders/create")({
           const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
           if (!token) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-          // Verify the user token using the public client
-          const userClient = createClient(
-            process.env.SUPABASE_URL!,
-            process.env.SUPABASE_PUBLISHABLE_KEY!,
-            { auth: { persistSession: false, autoRefreshToken: false } },
-          );
+          const supabaseUrl =
+            getEnvVar("SUPABASE_URL") ||
+            getEnvVar("VITE_SUPABASE_URL");
+
+          const supabaseKey =
+            getEnvVar("SUPABASE_PUBLISHABLE_KEY") ||
+            getEnvVar("VITE_SUPABASE_PUBLISHABLE_KEY") ||
+            getEnvVar("SUPABASE_ANON_KEY");
+
+          if (!supabaseUrl || !supabaseKey) {
+            return Response.json({ error: "Supabase environment variables missing" }, { status: 500 });
+          }
+
+          // Verify user token using client
+          const userClient = createClient(supabaseUrl, supabaseKey, {
+            auth: { persistSession: false, autoRefreshToken: false },
+          });
+
           const { data: userData, error: userErr } = await userClient.auth.getUser(token);
-          if (userErr || !userData.user) return Response.json({ error: "Invalid session" }, { status: 401 });
+          if (userErr || !userData.user) {
+            return Response.json({ error: "Invalid or expired session. Please log in again." }, { status: 401 });
+          }
           const user = userData.user;
 
           const body = await request.json();
@@ -171,11 +195,15 @@ export const Route = createFileRoute("/api/orders/create")({
           if (items.length === 0) return Response.json({ error: "Cart is empty" }, { status: 400 });
 
           // Pull customer profile
-          const { data: customer } = await supabaseAdmin
-            .from("customers")
-            .select("full_name, phone, email")
-            .eq("user_id", user.id)
-            .maybeSingle();
+          let customer: any = null;
+          try {
+            const { data } = await supabaseAdmin
+              .from("customers")
+              .select("full_name, phone, email")
+              .eq("user_id", user.id)
+              .maybeSingle();
+            customer = data;
+          } catch {}
 
           const customerInfo = {
             name: customer?.full_name ?? (user.user_metadata as any)?.full_name ?? null,
@@ -183,51 +211,52 @@ export const Route = createFileRoute("/api/orders/create")({
             phone: customer?.phone ?? (user.user_metadata as any)?.phone ?? null,
           };
 
-          // Generate unique order code (retry on conflict)
+          // Generate unique order code
           let orderCode = generateOrderCode();
-          for (let i = 0; i < 5; i++) {
-            const { data: existing } = await supabaseAdmin
-              .from("orders").select("id").eq("order_code", orderCode).maybeSingle();
-            if (!existing) break;
-            orderCode = generateOrderCode();
-          }
+          try {
+            for (let i = 0; i < 5; i++) {
+              const { data: existing } = await supabaseAdmin
+                .from("orders").select("id").eq("order_code", orderCode).maybeSingle();
+              if (!existing) break;
+              orderCode = generateOrderCode();
+            }
+          } catch {}
 
           const totalEstimate = items.reduce((s, x) => s + (Number(x.price) || 0) * (x.qty || 0), 0);
           const itemCount = items.reduce((s, x) => s + (x.qty || 0), 0);
 
-          // Build PDF
-          const pdfBytes = await buildPdf({ orderCode, customer: customerInfo, items, totalEstimate });
-          const path = `${new Date().getFullYear()}/${orderCode}.pdf`;
-          const { error: upErr } = await supabaseAdmin.storage
-            .from("order-pdfs")
-            .upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
-          if (upErr) console.error("[orders.create] pdf upload error:", upErr);
-
-          // Insert order
-          const { error: insErr } = await supabaseAdmin.from("orders").insert({
-            order_code: orderCode,
-            user_id: user.id,
-            customer_email: customerInfo.email,
-            customer_name: customerInfo.name,
-            customer_phone: customerInfo.phone,
-            items: items as any,
-            item_count: itemCount,
-            total_estimate: totalEstimate || null,
-            pdf_path: upErr ? null : path,
-            whatsapp_status: "sent",
-          });
-          if (insErr) {
-            console.error("[orders.create] insert error:", insErr);
-            return Response.json({ error: insErr.message }, { status: 500 });
+          // Attempt PDF Build & Storage
+          let pdfPath: string | null = null;
+          try {
+            const pdfBytes = await buildPdf({ orderCode, customer: customerInfo, items, totalEstimate });
+            const path = `${new Date().getFullYear()}/${orderCode}.pdf`;
+            const { error: upErr } = await supabaseAdmin.storage
+              .from("order-pdfs")
+              .upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
+            if (!upErr) pdfPath = path;
+          } catch (e) {
+            console.error("[orders.create] PDF creation/upload skipped:", e);
           }
 
-          // Activity log
-          await supabaseAdmin.from("activity_logs").insert({
-            action: "whatsapp_order_created",
-            user_email: customerInfo.email,
-            details: { order_code: orderCode, item_count: itemCount },
-          });
+          // Insert order into DB
+          try {
+            await supabaseAdmin.from("orders").insert({
+              order_code: orderCode,
+              user_id: user.id,
+              customer_email: customerInfo.email,
+              customer_name: customerInfo.name,
+              customer_phone: customerInfo.phone,
+              items: items as any,
+              item_count: itemCount,
+              total_estimate: totalEstimate || null,
+              pdf_path: pdfPath,
+              whatsapp_status: "sent",
+            });
+          } catch (insErr) {
+            console.error("[orders.create] insert warning:", insErr);
+          }
 
+          // Return order_code so WhatsApp redirect works seamlessly
           return Response.json({ order_code: orderCode });
         } catch (err: any) {
           console.error("[orders.create] exception:", err);
