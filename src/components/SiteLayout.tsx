@@ -51,7 +51,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col text-foreground pb-[calc(env(safe-area-inset-bottom)+4rem)] md:pb-0">
       <header className="sticky top-0 z-50 glass border-b border-[oklch(0.82_0.14_86/0.18)]">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link to="/" activeOptions={{ exact: true }} className="flex items-center gap-2 group">
             <span className="font-display text-lg md:text-xl font-bold tracking-tight text-shimmer">
               DE GREAT JAPHET
             </span>
@@ -62,7 +62,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                 key={n.to}
                 to={n.to}
                 preload="intent"
-                activeOptions={{ exact: n.to === "/" }}
+                activeOptions={{ exact: true }}
                 className="relative text-sm font-medium text-muted-foreground hover:text-gold transition-colors after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-full after:scale-x-0 after:origin-left after:bg-[var(--gold)] after:transition-transform hover:after:scale-x-100"
                 activeProps={{ className: "text-gold after:scale-x-100" }}
               >
@@ -139,7 +139,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={n.to}
                   to={n.to}
-                  activeOptions={{ exact: n.to === "/" }}
+                  activeOptions={{ exact: true }}
                   className="py-3 text-base text-foreground border-b border-border last:border-0 hover:text-gold transition"
                 >
                   {n.label}
