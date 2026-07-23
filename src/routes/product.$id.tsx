@@ -38,11 +38,15 @@ export const Route = createFileRoute("/product/$id")({
     };
   },
   loader: async ({ params }) => {
-    const { data } = await supabase
-      .from("products")
-      .select("*")
-      .eq("id", params.id)
-      .maybeSingle();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
+    let query = supabase.from("products").select("*");
+    if (isUuid) {
+      query = query.eq("id", params.id);
+    } else {
+      const cleanSlug = params.id.replace(/-/g, " ");
+      query = query.or(`item_code.eq.${params.id},product_name.ilike.%${cleanSlug}%`);
+    }
+    const { data } = await query.limit(1).maybeSingle();
     return data;
   },
   component: ProductPage,
@@ -78,18 +82,20 @@ function ProductPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!product || product.id !== id) {
+    if (!product || (product.id !== id && !id.includes(product.id))) {
       setLoading(true);
-      supabase
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle()
-        .then(({ data }) => {
-          const prod = data as Product | null;
-          setProduct(prod);
-          setLoading(false);
-        });
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      let query = supabase.from("products").select("*");
+      if (isUuid) {
+        query = query.eq("id", id);
+      } else {
+        const cleanSlug = id.replace(/-/g, " ");
+        query = query.or(`item_code.eq.${id},product_name.ilike.%${cleanSlug}%`);
+      }
+      query.limit(1).maybeSingle().then(({ data }) => {
+        setProduct(data as Product | null);
+        setLoading(false);
+      });
     }
   }, [id]);
 
