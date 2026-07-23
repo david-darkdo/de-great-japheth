@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 
 const NAV = [
-  { to: "/home", label: "Home" },
+  { to: "/", label: "Home" },
   { to: "/showroom", label: "Showroom" },
   { to: "/start-project", label: "Start Project" },
   { to: "/contact", label: "Contact" },
@@ -63,7 +63,7 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
                 to={n.to}
                 className="relative text-sm font-medium text-muted-foreground hover:text-gold transition-colors after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-full after:scale-x-0 after:origin-left after:bg-[var(--gold)] after:transition-transform hover:after:scale-x-100"
                 activeProps={{ className: "text-gold after:scale-x-100" }}
-                activeOptions={{ exact: n.to === "/home" }}
+                activeOptions={{ exact: n.to === "/" }}
               >
                 {n.label}
               </Link>
@@ -171,7 +171,6 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
       </header>
 
       <main className="flex-1">{children}</main>
-
 
       <footer className="mt-16 border-t border-[oklch(0.82_0.14_86/0.15)] bg-[oklch(0.10_0.02_260/0.8)] backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-12 grid gap-10 md:grid-cols-3">
