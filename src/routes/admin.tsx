@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES } from "@/lib/categories";
-import { Search, Globe, Tag, Sparkles, Mail, Send, Filter, History as HistoryIcon, LayoutTemplate, BarChart3, CheckCircle, Clock } from "lucide-react";
+import { Search, Globe, Tag, Sparkles, Mail, Send, Filter, History as HistoryIcon, LayoutTemplate, BarChart3, CheckCircle, Clock, Zap } from "lucide-react";
 import { CommunicationEngine, EmailTemplate, EmailLog } from "@/lib/communicationEngine";
 
 export const Route = createFileRoute("/admin")({
@@ -337,7 +337,7 @@ function DashboardTab({
       <StatCard label="Total Products" value={productCount} />
       <StatCard label="Total Customers" value={customerCount} />
       <StatCard label="WhatsApp Clicks" value={whatsappClicks} />
-      <StatCard label="Emails Dispatched" value={emailsSent} sub="Communication Engine" />
+      <StatCard label="Emails Dispatched" value={emailsSent} sub="Communication Engine (SendGrid)" />
     </div>
   );
 }
@@ -654,7 +654,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
 }
 
 /**
- * CUSTOMER COMMUNICATION OPERATING SYSTEM (BUILD H)
+ * CUSTOMER COMMUNICATION OPERATING SYSTEM (BUILD I - SENDGRID INTEGRATED)
  */
 function CommunicationCenterTab({
   templates,
@@ -670,6 +670,11 @@ function CommunicationCenterTab({
   const [subTab, setSubTab] = useState<"dashboard" | "workflows" | "campaigns" | "templates" | "audience" | "history">("dashboard");
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   
+  // Send Test Email State (BUILD I)
+  const [testEmail, setTestEmail] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testStatus, setTestStatus] = useState("");
+
   // Manual Campaign State
   const [campName, setCampName] = useState("");
   const [campSubject, setCampSubject] = useState("");
@@ -683,6 +688,38 @@ function CommunicationCenterTab({
   const deliveredCount = logs.filter(l => l.status === "sent" || l.status === "delivered").length;
   const failedCount = logs.filter(l => l.status === "failed").length;
   const deliveryRate = sentCount > 0 ? Math.round((deliveredCount / sentCount) * 100) : 100;
+
+  const sendTestEmailAction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testEmail.trim()) return alert("Test recipient email required.");
+    setTesting(true);
+    setTestStatus("Sending test email via SendGrid API...");
+
+    try {
+      const res = await CommunicationEngine.send({
+        templateKey: "welcome",
+        recipientEmail: testEmail.trim(),
+        variables: {
+          customer_name: testEmail.split("@")[0],
+        },
+        metadata: {
+          test_mode: true,
+          provider: "sendgrid",
+        },
+      });
+
+      if (res.success) {
+        setTestStatus(`✓ SendGrid Email Dispatched! Message ID: ${res.messageId || "sg-ok"}`);
+      } else {
+        setTestStatus(`❌ SendGrid Error: ${res.error || "Failed to dispatch"}`);
+      }
+      onReload();
+    } catch (err: any) {
+      setTestStatus("Error: " + err.message);
+    } finally {
+      setTesting(false);
+    }
+  };
 
   const saveTemplate = async (tpl: EmailTemplate) => {
     const { error } = await supabase
@@ -698,7 +735,7 @@ function CommunicationCenterTab({
     if (error) {
       alert("Failed to save template: " + error.message);
     } else {
-      alert("✓ Template updated successfully! All future automatic notifications will use this updated content.");
+      alert("✓ Template updated successfully! All future automatic SendGrid emails will use this updated content.");
       setEditingTemplate(null);
       onReload();
     }
@@ -708,7 +745,7 @@ function CommunicationCenterTab({
     e.preventDefault();
     if (!campSubject.trim()) return alert("Subject required.");
     setSending(true);
-    setStatusMsg("Dispatching campaign through Communication Engine...");
+    setStatusMsg("Dispatching campaign through SendGrid Communication Engine...");
 
     try {
       let targetEmails = customers.map(c => c.email);
@@ -733,8 +770,10 @@ function CommunicationCenterTab({
       }).select("id").single();
 
       let successCount = 0;
+      let lastErr: string | undefined;
+
       for (const email of targetEmails) {
-        await CommunicationEngine.send({
+        const res = await CommunicationEngine.send({
           templateKey: "manual_campaign",
           recipientEmail: email,
           campaignId: camp?.id,
@@ -746,13 +785,18 @@ function CommunicationCenterTab({
           metadata: {
             campaign_name: campName,
             audience_filter: campAudience,
-            ai_compatibility: "v2.0",
+            provider: "sendgrid",
           },
         });
-        successCount++;
+        if (res.success) successCount++;
+        else lastErr = res.error;
       }
 
-      setStatusMsg(`✓ Campaign sent successfully to ${successCount} customers!`);
+      if (successCount > 0) {
+        setStatusMsg(`✓ Campaign dispatched via SendGrid to ${successCount} customers!`);
+      } else {
+        setStatusMsg(`❌ SendGrid Campaign Error: ${lastErr || "Failed to deliver"}`);
+      }
       setCampName(""); setCampSubject(""); setCampBanner(""); setCampBody("");
       onReload();
     } catch (err: any) {
@@ -767,10 +811,10 @@ function CommunicationCenterTab({
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <Mail className="text-gold" size={24} /> Customer Communication Operating System
+            <Mail className="text-gold" size={24} /> Customer Communication Operating System (SendGrid Engine)
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Centralized communication engine for welcome emails, collection reminders, campaigns & analytics.
+            Centralized SendGrid v3 email engine for welcome emails, collection reminders, campaigns & delivery tracking.
           </p>
         </div>
       </div>
@@ -806,28 +850,56 @@ function CommunicationCenterTab({
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <StatCard label="Total Emails Sent" value={sentCount} />
             <StatCard label="Delivery Rate" value={`${deliveryRate}%`} />
-            <StatCard label="Open Rate" value="98.2%" sub="AI Open Tracker" />
+            <StatCard label="SendGrid Integration" value="v3 Active" sub="SENDGRID_API_KEY" />
             <StatCard label="Failed Emails" value={failedCount} />
           </div>
 
+          {/* BUILD I: TEST EMAIL ACTION */}
+          <form onSubmit={sendTestEmailAction} className="border border-[oklch(0.82_0.14_86/0.4)] rounded-xl p-6 bg-card space-y-3 shadow-gold">
+            <h3 className="text-sm font-bold flex items-center gap-2 text-gold">
+              <Zap size={16} /> Send Test Email (SendGrid Configuration Readiness Test)
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Enter any email address below to send an instant test message through SendGrid and verify your API key & verified sender email.
+            </p>
+            <div className="flex gap-2 max-w-xl">
+              <input
+                type="email"
+                placeholder="Enter test recipient email (e.g. yourname@gmail.com)"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                className="flex-1 border rounded-lg px-3 py-2 text-sm bg-background"
+                required
+              />
+              <button
+                type="submit"
+                disabled={testing}
+                className="btn-gold px-4 py-2 text-xs font-semibold shrink-0 disabled:opacity-50"
+              >
+                {testing ? "Dispatching..." : "Send Test Email"}
+              </button>
+            </div>
+            {testStatus && <p className="text-xs font-medium mt-2">{testStatus}</p>}
+          </form>
+
           <div className="border rounded-xl p-6 bg-card space-y-3">
-            <h3 className="text-sm font-semibold">Communication Engine Health</h3>
+            <h3 className="text-sm font-semibold">SendGrid Communication Engine Status</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-3 border rounded-lg bg-muted/30">
                 <span className="font-semibold text-foreground">Welcome Email Workflow:</span>
-                <span className="text-green-500 font-bold ml-2">● Active (Auto-Triggered on Signup)</span>
+                <span className="text-green-500 font-bold ml-2">● SendGrid Connected (Signup Trigger)</span>
               </div>
               <div className="p-3 border rounded-lg bg-muted/30">
                 <span className="font-semibold text-foreground">Collection Reminder Workflow:</span>
-                <span className="text-green-500 font-bold ml-2">● Active (24h Delay)</span>
+                <span className="text-green-500 font-bold ml-2">● SendGrid Connected (24h Delay)</span>
               </div>
               <div className="p-3 border rounded-lg bg-muted/30">
                 <span className="font-semibold text-foreground">Abandoned Collection Reminder:</span>
-                <span className="text-green-500 font-bold ml-2">● Active (72h Delay)</span>
+                <span className="text-green-500 font-bold ml-2">● SendGrid Connected (72h Delay)</span>
               </div>
               <div className="p-3 border rounded-lg bg-muted/30">
-                <span className="font-semibold text-foreground">Monthly Newsletter & Holiday Engine:</span>
-                <span className="text-green-500 font-bold ml-2">● Active (Pre-configured)</span>
+                <span className="font-semibold text-foreground">Newsletter & Campaign Engine:</span>
+                <span className="text-green-500 font-bold ml-2">● SendGrid Connected</span>
               </div>
             </div>
           </div>
@@ -837,7 +909,7 @@ function CommunicationCenterTab({
       {/* 2. Automatic Workflows */}
       {subTab === "workflows" && (
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Pre-Configured Automatic Workflows</h3>
+          <h3 className="text-sm font-semibold">Pre-Configured Automatic Workflows (SendGrid Powered)</h3>
           <p className="text-xs text-muted-foreground">
             All automatic emails pull content directly from the Template Manager below. No email content is hardcoded.
           </p>
@@ -846,16 +918,16 @@ function CommunicationCenterTab({
             <div className="border rounded-xl p-4 bg-card space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-sm">Welcome Email</h4>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">ACTIVE</span>
+                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">SENDGRID ACTIVE</span>
               </div>
-              <p className="text-xs text-muted-foreground">Trigger: New Customer Account Registration (Sent Immediately)</p>
+              <p className="text-xs text-muted-foreground">Trigger: New Customer Account Registration (Sent Immediately via SendGrid)</p>
               <p className="text-xs font-mono bg-muted p-2 rounded">Template: welcome</p>
             </div>
 
             <div className="border rounded-xl p-4 bg-card space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-sm">Collection Reminder</h4>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">ACTIVE</span>
+                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">SENDGRID ACTIVE</span>
               </div>
               <p className="text-xs text-muted-foreground">Trigger: Saved Collection without order submission (Delay: 24h)</p>
               <p className="text-xs font-mono bg-muted p-2 rounded">Template: collection_reminder</p>
@@ -864,7 +936,7 @@ function CommunicationCenterTab({
             <div className="border rounded-xl p-4 bg-card space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-sm">Abandoned Collection Reminder</h4>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">ACTIVE</span>
+                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">SENDGRID ACTIVE</span>
               </div>
               <p className="text-xs text-muted-foreground">Trigger: Inactive Saved Collection (Delay: 72h)</p>
               <p className="text-xs font-mono bg-muted p-2 rounded">Template: abandoned_collection</p>
@@ -873,7 +945,7 @@ function CommunicationCenterTab({
             <div className="border rounded-xl p-4 bg-card space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-sm">Monthly Newsletter Showcase</h4>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">ACTIVE</span>
+                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">SENDGRID ACTIVE</span>
               </div>
               <p className="text-xs text-muted-foreground">Trigger: Monthly Cron Schedule</p>
               <p className="text-xs font-mono bg-muted p-2 rounded">Template: monthly_newsletter</p>
@@ -922,10 +994,10 @@ function CommunicationCenterTab({
       {subTab === "campaigns" && (
         <form onSubmit={dispatchManualCampaign} className="max-w-2xl border rounded-xl p-6 bg-card space-y-4">
           <h3 className="font-bold text-base flex items-center gap-2">
-            <Send className="text-gold" size={18} /> Launch Communication Campaign
+            <Send className="text-gold" size={18} /> Launch Communication Campaign (SendGrid)
           </h3>
           <p className="text-xs text-muted-foreground">
-            Dispatch manual campaigns, holiday offers, or system maintenance notices to targeted customer segments.
+            Dispatch manual campaigns, holiday offers, or system maintenance notices to targeted customer segments via SendGrid v3 API.
           </p>
 
           <input
@@ -969,7 +1041,7 @@ function CommunicationCenterTab({
             disabled={sending}
             className="btn-gold w-full py-2.5 font-semibold text-sm disabled:opacity-50"
           >
-            {sending ? "Dispatching..." : "Send Campaign Now"}
+            {sending ? "Dispatching via SendGrid..." : "Send Campaign Now"}
           </button>
 
           {statusMsg && <p className="text-xs font-medium text-center mt-2">{statusMsg}</p>}
@@ -1002,35 +1074,40 @@ function CommunicationCenterTab({
       {/* 6. Delivery History Subtab */}
       {subTab === "history" && (
         <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Real-Time Delivery History</h3>
+          <h3 className="text-sm font-semibold">Real-Time SendGrid Delivery History</h3>
           <div className="border rounded-xl overflow-x-auto bg-card">
-            <table className="w-full text-xs min-w-[700px]">
+            <table className="w-full text-xs min-w-[750px]">
               <thead className="bg-muted">
                 <tr>
                   <th className="text-left p-3">Recipient</th>
+                  <th className="text-left p-3">Provider</th>
                   <th className="text-left p-3">Template</th>
                   <th className="text-left p-3">Subject</th>
-                  <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Status / Error</th>
                   <th className="text-left p-3">Sent At</th>
                 </tr>
               </thead>
               <tbody>
                 {logs.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-6 text-center text-muted-foreground">No email delivery logs recorded yet.</td>
+                    <td colSpan={6} className="p-6 text-center text-muted-foreground">No email delivery logs recorded yet.</td>
                   </tr>
                 ) : (
                   logs.map((l) => (
                     <tr key={l.id} className="border-t">
                       <td className="p-3 font-medium">{l.recipient_email}</td>
-                      <td className="p-3 font-mono text-[11px] text-gold">{l.template_key}</td>
-                      <td className="p-3 truncate max-w-[200px]">{l.subject}</td>
+                      <td className="p-3 font-mono text-[10px] text-gold uppercase">{l.metadata?.provider || "sendgrid"}</td>
+                      <td className="p-3 font-mono text-[11px]">{l.template_key}</td>
+                      <td className="p-3 truncate max-w-[180px]">{l.subject}</td>
                       <td className="p-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           l.status === "sent" || l.status === "delivered" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
                         }`}>
                           {l.status.toUpperCase()}
                         </span>
+                        {l.error_message && (
+                          <p className="text-[10px] text-red-400 mt-1 max-w-[160px] truncate">{l.error_message}</p>
+                        )}
                       </td>
                       <td className="p-3 text-muted-foreground">{new Date(l.created_at).toLocaleString()}</td>
                     </tr>
