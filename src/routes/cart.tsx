@@ -4,6 +4,7 @@ import { Trash2, Minus, Plus, MessageCircle, ShoppingBag, ArrowLeft, History, Lo
 import { SiteLayout } from "@/components/SiteLayout";
 import { cart, useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
+import { getCollectionUrl } from "@/lib/url";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAPHET" }] }),
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/cart")({
 const WA = "2347066786626";
 
 function buildNarrative(items: ReturnType<typeof useCart>, orderCode: string) {
-  const collectionUrl = `https://great-japhet.vercel.app/collection/${orderCode}`;
+  const collectionUrl = getCollectionUrl(orderCode);
   const total = items.reduce((s, x) => s + (x.price ?? 0) * x.qty, 0);
 
   const lines: string[] = [];
