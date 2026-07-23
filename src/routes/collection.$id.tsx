@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { MessageCircle, FileText, CheckCircle2, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
+import { getCollectionUrl } from "@/lib/url";
 
 export const Route = createFileRoute("/collection/$id")({
   head: () => ({
@@ -12,11 +13,14 @@ export const Route = createFileRoute("/collection/$id")({
     ],
   }),
   loader: async ({ params }) => {
-    const { data } = await supabase
-      .from("orders")
-      .select("*")
-      .or(`id.eq.${params.id},order_code.eq.${params.id}`)
-      .maybeSingle();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.id);
+    let query = supabase.from("orders").select("*");
+    if (isUuid) {
+      query = query.eq("id", params.id);
+    } else {
+      query = query.eq("order_code", params.id);
+    }
+    const { data } = await query.maybeSingle();
     return data;
   },
   component: CollectionPage,
@@ -54,15 +58,17 @@ function CollectionPage() {
   useEffect(() => {
     if (!collection || (collection.id !== id && collection.order_code !== id)) {
       setLoading(true);
-      supabase
-        .from("orders")
-        .select("*")
-        .or(`id.eq.${id},order_code.eq.${id}`)
-        .maybeSingle()
-        .then(({ data }) => {
-          setCollection(data as Order | null);
-          setLoading(false);
-        });
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      let query = supabase.from("orders").select("*");
+      if (isUuid) {
+        query = query.eq("id", id);
+      } else {
+        query = query.eq("order_code", id);
+      }
+      query.maybeSingle().then(({ data }) => {
+        setCollection(data as Order | null);
+        setLoading(false);
+      });
     }
   }, [id]);
 
@@ -84,9 +90,10 @@ function CollectionPage() {
 
   const items = collection.items || [];
   const total = collection.total_estimate || items.reduce((s, i) => s + (i.price || 0) * (i.qty || 1), 0);
+  const collectionUrl = getCollectionUrl(collection.order_code);
 
   const waText = encodeURIComponent(
-    `Hello Great Japhet,\n\nI am reviewing Collection ${collection.order_code}.\n\nCollection Link:\nhttps://great-japhet.vercel.app/collection/${collection.order_code}\n\nPlease confirm availability and installation terms.`
+    `Hello Great Japhet,\n\nI am reviewing Collection ${collection.order_code}.\n\nCollection Link:\n${collectionUrl}\n\nPlease confirm availability and installation terms.`
   );
 
   return (
