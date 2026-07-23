@@ -337,7 +337,7 @@ function DashboardTab({
       <StatCard label="Total Products" value={productCount} />
       <StatCard label="Total Customers" value={customerCount} />
       <StatCard label="WhatsApp Clicks" value={whatsappClicks} />
-      <StatCard label="Emails Dispatched" value={emailsSent} sub="Communication Engine (SendGrid)" />
+      <StatCard label="Emails Dispatched" value={emailsSent} sub="SendGrid Engine" />
     </div>
   );
 }
@@ -857,10 +857,10 @@ function CommunicationCenterTab({
           {/* BUILD I: TEST EMAIL ACTION */}
           <form onSubmit={sendTestEmailAction} className="border border-[oklch(0.82_0.14_86/0.4)] rounded-xl p-6 bg-card space-y-3 shadow-gold">
             <h3 className="text-sm font-bold flex items-center gap-2 text-gold">
-              <Zap size={16} /> Send Test Email (SendGrid Configuration Readiness Test)
+              <Zap size={16} /> Send Test Email (SendGrid Readiness Verification)
             </h3>
             <p className="text-xs text-muted-foreground">
-              Enter any email address below to send an instant test message through SendGrid and verify your API key & verified sender email.
+              Enter any email address below to send an instant test message through SendGrid using verified sender <strong>greatjaphethenterprises@gmail.com</strong>.
             </p>
             <div className="flex gap-2 max-w-xl">
               <input
@@ -1096,9 +1096,9 @@ function CommunicationCenterTab({
                   logs.map((l) => (
                     <tr key={l.id} className="border-t">
                       <td className="p-3 font-medium">{l.recipient_email}</td>
-                      <td className="p-3 font-mono text-[10px] text-gold uppercase">{l.metadata?.provider || "sendgrid"}</td>
+                      <td className="p-3 font-mono text-[11px] text-gold">{l.metadata?.provider || "sendgrid"}</td>
                       <td className="p-3 font-mono text-[11px]">{l.template_key}</td>
-                      <td className="p-3 truncate max-w-[180px]">{l.subject}</td>
+                      <td className="p-3 truncate max-w-[200px]">{l.subject}</td>
                       <td className="p-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           l.status === "sent" || l.status === "delivered" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
@@ -1106,7 +1106,9 @@ function CommunicationCenterTab({
                           {l.status.toUpperCase()}
                         </span>
                         {l.error_message && (
-                          <p className="text-[10px] text-red-400 mt-1 max-w-[160px] truncate">{l.error_message}</p>
+                          <p className="text-[10px] text-red-400 truncate max-w-[150px] mt-0.5" title={l.error_message}>
+                            {l.error_message}
+                          </p>
                         )}
                       </td>
                       <td className="p-3 text-muted-foreground">{new Date(l.created_at).toLocaleString()}</td>
