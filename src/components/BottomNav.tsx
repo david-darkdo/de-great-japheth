@@ -43,6 +43,7 @@ export function BottomNav() {
   const isActive = (to: string, exact = false) =>
     exact ? path === to : path === to || path.startsWith(to + "/");
 
+  const homeActive = isActive("/home") || path === "/";
   const cartActive = isActive("/cart") || isActive("/orders");
   const accountActive = accountOpen || isActive("/auth") || isActive("/admin");
 
@@ -100,7 +101,7 @@ export function BottomNav() {
         aria-label="Bottom navigation"
       >
         <div className="relative max-w-md mx-auto h-16 grid grid-cols-5 items-center px-2">
-          <Tab to="/home" icon={Home} label="Home" active={isActive("/home")} />
+          <Tab to="/home" icon={Home} label="Home" active={homeActive} />
           <Tab to="/contact" icon={Phone} label="Contact" active={isActive("/contact")} />
 
           {/* Center showroom */}
