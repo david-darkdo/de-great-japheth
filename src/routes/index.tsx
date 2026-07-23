@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowRight, ShoppingBag, ListChecks, MessageCircle, CheckCircle2 } from "lucide-react";
+import { ArrowRight, ShoppingBag, ListChecks, MessageCircle, CheckCircle2, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
 import { HOME_CATEGORIES, categorySlug } from "@/lib/categories";
@@ -29,6 +29,19 @@ export const Route = createFileRoute("/")({
 });
 
 export function HomePage() {
+  const navigate = useNavigate();
+  const [homeQuery, setHomeQuery] = useState("");
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (homeQuery.trim()) {
+      navigate({
+        to: "/showroom",
+        search: { q: homeQuery.trim() },
+      });
+    }
+  };
+
   return (
     <SiteLayout>
       {/* Hero */}
@@ -43,7 +56,7 @@ export function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-[oklch(0.10_0.02_260/0.6)] via-[oklch(0.10_0.02_260/0.7)] to-[oklch(0.07_0.02_260/0.95)]" />
         <div className="absolute -top-40 -left-40 w-[28rem] h-[28rem] rounded-full bg-[oklch(0.55_0.18_258/0.25)] blur-3xl animate-[float_9s_ease-in-out_infinite]" />
         <div className="absolute -bottom-40 -right-40 w-[28rem] h-[28rem] rounded-full bg-[oklch(0.82_0.14_86/0.18)] blur-3xl animate-[float_11s_ease-in-out_infinite]" />
-        <div className="relative max-w-7xl mx-auto px-4 py-24 md:py-36">
+        <div className="relative max-w-7xl mx-auto px-4 py-20 md:py-32">
           <p className="text-xs md:text-sm tracking-[0.4em] text-gold uppercase mb-4 animate-[fade-in_.8s_ease-out_both]">
             DE GREAT JAPHET
           </p>
@@ -53,7 +66,28 @@ export function HomePage() {
           <p className="mt-6 text-base md:text-lg text-foreground/80 max-w-2xl leading-relaxed animate-[fade-up_.9s_ease-out_.1s_both]">
             Premium building materials and finishing for modern interiors. Curate your selection — we deliver and install.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 animate-[fade-up_1s_ease-out_.2s_both]">
+
+          {/* Homepage Search Bar UI */}
+          <form onSubmit={handleSearchSubmit} className="mt-8 max-w-xl relative animate-[fade-up_.95s_ease-out_.15s_both]">
+            <div className="relative flex items-center">
+              <Search className="absolute left-4 text-gold shrink-0" size={20} />
+              <input
+                type="text"
+                placeholder="Search products by name, doors, tiles, electrical, brand..."
+                value={homeQuery}
+                onChange={(e) => setHomeQuery(e.target.value)}
+                className="w-full pl-12 pr-28 py-4 rounded-2xl glass border border-[oklch(0.82_0.14_86/0.3)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-gold transition-all shadow-gold text-sm md:text-base"
+              />
+              <button
+                type="submit"
+                className="absolute right-2 btn-gold py-2 px-4 text-xs font-semibold"
+              >
+                Search
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 animate-[fade-up_1s_ease-out_.2s_both]">
             <Link to="/showroom" className="btn-gold">
               Explore Showroom <ArrowRight size={16} />
             </Link>
