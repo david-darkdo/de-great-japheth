@@ -1,20 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, MapPin, Phone, Mail, ShoppingBag, LogIn, LogOut, User, History, ShieldCheck } from "lucide-react";
+import { Menu, X, MapPin, Phone, Mail, ShoppingBag, LogIn, LogOut, User, History, ShieldCheck, Home } from "lucide-react";
 import { useCart } from "@/lib/cart";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/BottomNav";
 
-const NAV = [
-  { to: "/", label: "Home" },
-  { to: "/showroom", label: "Showroom" },
-  { to: "/start-project", label: "Start Project" },
-  { to: "/contact", label: "Contact" },
-] as const;
-
 export function SiteLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { location } = useRouterState();
+  const currentPath = location.pathname;
   const items = useCart();
   const count = items.reduce((s, x) => s + x.qty, 0);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -43,32 +37,57 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     setOpen(false);
-  }, [location.pathname]);
+  }, [currentPath]);
 
   const signOut = async () => { await supabase.auth.signOut(); };
+
+  const isHomeActive = currentPath === "/";
+  const isShowroomActive = currentPath === "/showroom";
+  const isStartProjectActive = currentPath === "/start-project";
+  const isContactActive = currentPath === "/contact";
 
   return (
     <div className="min-h-screen flex flex-col text-foreground pb-[calc(env(safe-area-inset-bottom)+4rem)] md:pb-0">
       <header className="sticky top-0 z-50 glass border-b border-[oklch(0.82_0.14_86/0.18)]">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link to="/" activeOptions={{ exact: true }} className="flex items-center gap-2 group">
+          <a href="/" className="flex items-center gap-2 group">
             <span className="font-display text-lg md:text-xl font-bold tracking-tight text-shimmer">
               DE GREAT JAPHET
             </span>
-          </Link>
+          </a>
           <nav className="hidden md:flex items-center gap-8">
-            {NAV.map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                preload="intent"
-                activeOptions={{ exact: true }}
-                className="relative text-sm font-medium text-muted-foreground hover:text-gold transition-colors after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-full after:scale-x-0 after:origin-left after:bg-[var(--gold)] after:transition-transform hover:after:scale-x-100"
-                activeProps={{ className: "text-gold after:scale-x-100" }}
-              >
-                {n.label}
-              </Link>
-            ))}
+            <a
+              href="/"
+              className={`relative text-sm font-medium transition-colors after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-full after:origin-left after:bg-[var(--gold)] after:transition-transform ${
+                isHomeActive ? "text-gold after:scale-x-100" : "text-muted-foreground hover:text-gold after:scale-x-0 hover:after:scale-x-100"
+              }`}
+            >
+              Home
+            </a>
+            <a
+              href="/showroom"
+              className={`relative text-sm font-medium transition-colors after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-full after:origin-left after:bg-[var(--gold)] after:transition-transform ${
+                isShowroomActive ? "text-gold after:scale-x-100" : "text-muted-foreground hover:text-gold after:scale-x-0 hover:after:scale-x-100"
+              }`}
+            >
+              Showroom
+            </a>
+            <a
+              href="/start-project"
+              className={`relative text-sm font-medium transition-colors after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-full after:origin-left after:bg-[var(--gold)] after:transition-transform ${
+                isStartProjectActive ? "text-gold after:scale-x-100" : "text-muted-foreground hover:text-gold after:scale-x-0 hover:after:scale-x-100"
+              }`}
+            >
+              Start Project
+            </a>
+            <a
+              href="/contact"
+              className={`relative text-sm font-medium transition-colors after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-full after:origin-left after:bg-[var(--gold)] after:transition-transform ${
+                isContactActive ? "text-gold after:scale-x-100" : "text-muted-foreground hover:text-gold after:scale-x-0 hover:after:scale-x-100"
+              }`}
+            >
+              Contact
+            </a>
           </nav>
           <div className="flex items-center gap-2">
             <Link
@@ -135,16 +154,30 @@ export function SiteLayout({ children }: { children: React.ReactNode }) {
         {open && (
           <div className="md:hidden border-t border-[oklch(0.82_0.14_86/0.15)] bg-background/95 backdrop-blur animate-[fade-in_.25s_ease-out_both]">
             <nav className="flex flex-col px-4 py-3">
-              {NAV.map((n) => (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  activeOptions={{ exact: true }}
-                  className="py-3 text-base text-foreground border-b border-border last:border-0 hover:text-gold transition"
-                >
-                  {n.label}
-                </Link>
-              ))}
+              <a
+                href="/"
+                className={`py-3 text-base border-b border-border transition ${isHomeActive ? "text-gold font-semibold" : "text-foreground hover:text-gold"}`}
+              >
+                Home
+              </a>
+              <a
+                href="/showroom"
+                className={`py-3 text-base border-b border-border transition ${isShowroomActive ? "text-gold font-semibold" : "text-foreground hover:text-gold"}`}
+              >
+                Showroom
+              </a>
+              <a
+                href="/start-project"
+                className={`py-3 text-base border-b border-border transition ${isStartProjectActive ? "text-gold font-semibold" : "text-foreground hover:text-gold"}`}
+              >
+                Start Project
+              </a>
+              <a
+                href="/contact"
+                className={`py-3 text-base border-b border-border last:border-0 transition ${isContactActive ? "text-gold font-semibold" : "text-foreground hover:text-gold"}`}
+              >
+                Contact
+              </a>
               {userEmail ? (
                 <>
                   <div className="py-3 text-xs text-muted-foreground border-b border-border flex items-center gap-2">
