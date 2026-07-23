@@ -17,7 +17,9 @@ export interface SendEmailPayload {
   recipientId?: string;
   variables?: Record<string, string>;
   campaignId?: string;
-  metadata?: Record<string, any>; // AI compatible: AI recommendations, subject lines, personalized tags
+  fromEmail?: string;
+  fromName?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface EmailTemplate {
@@ -47,8 +49,7 @@ export interface EmailLog {
 }
 
 /**
- * Centralized Communication Engine
- * Every email flows through this single architecture.
+ * Centralized Customer Communication Engine with SendGrid v3 Integration
  */
 export class CommunicationEngine {
   /**
@@ -82,9 +83,9 @@ export class CommunicationEngine {
   }
 
   /**
-   * Unified Send Email Engine
+   * Unified Send Email Engine via SendGrid API
    */
-  static async send(payload: SendEmailPayload): Promise<{ success: boolean; logId?: string; error?: string }> {
+  static async send(payload: SendEmailPayload): Promise<{ success: boolean; logId?: string; messageId?: string; error?: string }> {
     try {
       const template = await this.getTemplate(payload.templateKey);
       const rawSubject = template?.subject || "Notification from DE GREAT JAPHET";
@@ -98,9 +99,9 @@ export class CommunicationEngine {
       const finalSubject = this.interpolate(rawSubject, vars);
       const finalBody = this.interpolate(rawBody, vars);
 
-      // Attempt sending via server API endpoint or fallback logging
-      let sendSuccess = true;
+      let sendSuccess = false;
       let errorMsg: string | undefined;
+      let messageId: string | undefined;
 
       try {
         const res = await fetch("/api/communication/send", {
@@ -111,17 +112,24 @@ export class CommunicationEngine {
             subject: finalSubject,
             bodyHtml: finalBody,
             templateKey: payload.templateKey,
+            fromEmail: payload.fromEmail,
+            fromName: payload.fromName,
           }),
         });
-        if (!res.ok) {
-          const errJson = await res.json().catch(() => ({}));
-          errorMsg = errJson.error || `HTTP ${res.status}`;
+
+        const json = await res.json().catch(() => ({}));
+        if (res.ok && json.success) {
+          sendSuccess = true;
+          messageId = json.messageId;
+        } else {
+          errorMsg = json.error || `SendGrid HTTP ${res.status}`;
+          messageId = json.messageId;
         }
       } catch (err: any) {
-        errorMsg = err.message || "Network send error";
+        errorMsg = err.message || "Network request error";
       }
 
-      // Record in Delivery History (email_logs) — AI Compatible
+      // Record in Delivery History (email_logs)
       const { data: log, error: logErr } = await supabase
         .from("email_logs")
         .insert({
@@ -133,8 +141,10 @@ export class CommunicationEngine {
           status: sendSuccess ? "sent" : "failed",
           error_message: errorMsg || null,
           metadata: {
-            ai_compatible: true,
-            engine_version: "2.0",
+            provider: "sendgrid",
+            message_id: messageId || null,
+            delivery_timestamp: new Date().toISOString(),
+            engine_version: "2.0-sendgrid",
             vars_used: vars,
             ...payload.metadata,
           },
@@ -149,6 +159,7 @@ export class CommunicationEngine {
       return {
         success: sendSuccess,
         logId: log?.id,
+        messageId,
         error: errorMsg,
       };
     } catch (err: any) {
