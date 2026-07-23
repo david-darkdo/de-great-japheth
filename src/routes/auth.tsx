@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteLayout } from "@/components/SiteLayout";
+import { CommunicationEngine } from "@/lib/communicationEngine";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({
@@ -39,7 +40,7 @@ function AuthPage() {
           setMsg("Full name and phone are required.");
           return;
         }
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email, password,
           options: {
             emailRedirectTo: `${window.location.origin}${redirect}`,
@@ -47,10 +48,14 @@ function AuthPage() {
           },
         });
         if (error) { setMsg(error.message); return; }
-        // Try immediate sign in (works if auto-confirm enabled on Supabase)
+
+        // Trigger automatic Welcome Email via Communication Engine immediately
+        CommunicationEngine.triggerWelcome(email, data.user?.id, fullName);
+
+        // Try immediate sign in
         const si = await supabase.auth.signInWithPassword({ email, password });
         if (si.error) {
-          setMsg("Account created! Please check your email to confirm, or sign in.");
+          setMsg("Account created! Welcome email sent. Please check your inbox or sign in.");
           setMode("signin");
           return;
         }
