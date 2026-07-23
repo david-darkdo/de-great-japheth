@@ -146,7 +146,7 @@ export function BottomNav() {
               <span className={`mt-1 text-[10px] font-semibold tracking-wide ${isShowroom ? "text-gold" : "text-muted-foreground"}`}>
                 SHOWROOM
               </span>
-            </Link>
+            </a>
           </div>
 
           {/* Cart Tab */}
