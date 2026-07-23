@@ -40,12 +40,11 @@ export function BottomNav() {
 
   const signOut = async () => { await supabase.auth.signOut(); setAccountOpen(false); };
 
-  const isActive = (to: string, exact = false) =>
-    exact ? path === to : path === to || path.startsWith(to + "/");
-
-  const homeActive = isActive("/home") || path === "/";
-  const cartActive = isActive("/cart") || isActive("/orders");
-  const accountActive = accountOpen || isActive("/auth") || isActive("/admin");
+  const homeActive = path === "/" || path === "/home";
+  const showroomActive = path === "/showroom" || path.startsWith("/showroom/");
+  const contactActive = path === "/contact" || path.startsWith("/contact/");
+  const cartActive = path === "/cart" || path.startsWith("/cart/") || path === "/orders" || path.startsWith("/orders/");
+  const accountActive = accountOpen || path === "/auth" || path.startsWith("/auth/") || path === "/admin" || path.startsWith("/admin/");
 
   return (
     <>
@@ -101,8 +100,8 @@ export function BottomNav() {
         aria-label="Bottom navigation"
       >
         <div className="relative max-w-md mx-auto h-16 grid grid-cols-5 items-center px-2">
-          <Tab to="/home" icon={Home} label="Home" active={homeActive} />
-          <Tab to="/contact" icon={Phone} label="Contact" active={isActive("/contact")} />
+          <Tab to="/" icon={Home} label="Home" active={homeActive} />
+          <Tab to="/contact" icon={Phone} label="Contact" active={contactActive} />
 
           {/* Center showroom */}
           <div className="flex justify-center">
@@ -113,12 +112,12 @@ export function BottomNav() {
             >
               <span
                 className={`relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-gold text-[var(--cta-foreground)] shadow-gold ring-4 ring-background transition-transform duration-300 active:scale-90 group-hover:scale-105 ${
-                  isActive("/showroom") ? "animate-[glow-pulse_2.4s_ease-in-out_infinite]" : ""
+                  showroomActive ? "animate-[glow-pulse_2.4s_ease-in-out_infinite]" : ""
                 }`}
               >
                 <ShoppingBag size={26} strokeWidth={2.2} />
               </span>
-              <span className={`mt-1 text-[10px] font-semibold tracking-wide ${isActive("/showroom") ? "text-gold" : "text-muted-foreground"}`}>
+              <span className={`mt-1 text-[10px] font-semibold tracking-wide ${showroomActive ? "text-gold" : "text-muted-foreground"}`}>
                 SHOWROOM
               </span>
             </Link>
