@@ -223,7 +223,7 @@ function AdminDashboard() {
   const whatsappClicks = logs.filter((l) =>
     (l.action || "").toLowerCase().includes("whatsapp"),
   ).length;
-  // For total whatsapp orders/clicks across all-time we need a separate count
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
@@ -348,14 +348,41 @@ function ProductsTab({
   );
 }
 
+// Resilient product image upload handler (Direct Supabase Storage with API fallback)
 async function uploadImage(file: File): Promise<string> {
+  console.log("[upload] starting upload for:", file.name, file.size);
+
+  // 1. Direct browser-side upload to Supabase Storage bucket 'product-images'
+  try {
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    
+    const { data: upData, error: upErr } = await supabase.storage
+      .from("product-images")
+      .upload(filename, file, { upsert: true });
+
+    if (!upErr && upData) {
+      const { data: urlData } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filename);
+      if (urlData?.publicUrl) {
+        console.log("[upload] Direct Supabase Storage upload succeeded:", urlData.publicUrl);
+        return urlData.publicUrl;
+      }
+    } else if (upErr) {
+      console.warn("[upload] Supabase Storage direct upload notice:", upErr.message);
+    }
+  } catch (sErr) {
+    console.warn("[upload] Supabase direct exception, proceeding to API route:", sErr);
+  }
+
+  // 2. Fallback to /api/upload-image
   const fd = new FormData();
   fd.append("file", file);
-  console.log("[upload] →", file.name, file.size);
   const res = await fetch("/api/upload-image", { method: "POST", body: fd });
   const json = await res.json();
-  console.log("[upload] response:", json);
-  if (!res.ok || !json.url) throw new Error(json.error || "Upload failed");
+  console.log("[upload] API route response:", json);
+  if (!res.ok || !json.url) throw new Error(json.error || "Image upload failed");
   return json.url;
 }
 
@@ -364,7 +391,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   const [category, setCategory] = useState("");
   const [family, setFamily] = useState("");
   const [price, setPrice] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("NGN");
   const [description, setDescription] = useState("");
   const [initialFile, setInitialFile] = useState<File | null>(null);
   const [finishedFile, setFinishedFile] = useState<File | null>(null);
@@ -403,7 +430,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
         setStatus("Uploading finished image...");
         finishedImageUrl = await uploadImage(finishedFile);
       }
-      setStatus("Saving...");
+      setStatus("Saving product to database...");
       const { data, error } = await supabase
         .from("products")
         .insert({
@@ -419,16 +446,16 @@ function UploadTab({ onDone }: { onDone: () => void }) {
         .select()
         .single();
       if (error) throw error;
-      console.log("[upload] saved:", data);
-      setStatus("✓ Uploaded");
-      setName(""); setCategory(""); setFamily(""); setPrice(""); setCurrency("USD"); setDescription("");
+      console.log("[upload] saved product:", data);
+      setStatus("✓ Product uploaded successfully!");
+      setName(""); setCategory(""); setFamily(""); setPrice(""); setCurrency("NGN"); setDescription("");
       setInitialFile(null); setFinishedFile(null);
       if (initRef.current) initRef.current.value = "";
       if (finRef.current) finRef.current.value = "";
       onDone();
     } catch (err: any) {
       console.error(err);
-      setStatus("Error: " + err.message);
+      setStatus("Error: " + (err.message || "Failed to upload product"));
     } finally {
       setBusy(false);
     }
@@ -436,7 +463,7 @@ function UploadTab({ onDone }: { onDone: () => void }) {
 
   return (
     <form onSubmit={submit} className="max-w-xl space-y-4 border rounded-lg p-6">
-      <input type="text" placeholder="Product Name" value={name}
+      <input type="text" placeholder="Product Name *" value={name}
         onChange={(e) => setName(e.target.value)}
         className="w-full border rounded px-3 py-2" required />
       <select
@@ -459,8 +486,8 @@ function UploadTab({ onDone }: { onDone: () => void }) {
       <div className="flex gap-2">
         <select value={currency} onChange={(e) => setCurrency(e.target.value)}
           className="border rounded px-3 py-2 bg-background">
-          <option value="USD">USD ($)</option>
           <option value="NGN">Naira (₦)</option>
+          <option value="USD">USD ($)</option>
         </select>
         <input type="number" step="0.01" placeholder="Price" value={price}
           onChange={(e) => setPrice(e.target.value)}
@@ -503,10 +530,10 @@ function UploadTab({ onDone }: { onDone: () => void }) {
       </div>
 
       <button type="submit" disabled={busy}
-        className="w-full bg-primary text-primary-foreground rounded py-2 disabled:opacity-50">
+        className="w-full bg-primary text-primary-foreground rounded py-2 disabled:opacity-50 font-medium">
         {busy ? "Uploading..." : "Save Product"}
       </button>
-      {status && <p className="text-sm">{status}</p>}
+      {status && <p className="text-sm font-medium mt-2">{status}</p>}
     </form>
   );
 }
@@ -561,7 +588,6 @@ function CustomersTab({ customers, logs }: { customers: Customer[]; logs: Activi
 const ROLE_OPTIONS = ["customer", "staff", "super_admin"] as const;
 
 function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customers: Customer[]; onChanged: () => void }) {
-  // Group roles per user
   const rolesByUser = new Map<string, UserRole[]>();
   roles.forEach((r) => {
     const arr = rolesByUser.get(r.user_id) || [];
@@ -570,13 +596,11 @@ function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customer
   });
   const customerByUserId = new Map(customers.filter((c) => c.user_id).map((c) => [c.user_id!, c]));
 
-  // Union of users (from customers + roles)
   const userIds = new Set<string>();
   customers.forEach((c) => c.user_id && userIds.add(c.user_id));
   roles.forEach((r) => userIds.add(r.user_id));
 
   const setRole = async (user_id: string, email: string | null, newRole: string) => {
-    // Replace all roles for that user with the chosen one
     const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", user_id);
     if (delErr) { alert("Failed: " + delErr.message); return; }
     const { error: insErr } = await supabase.from("user_roles").insert({ user_id, email, role: newRole as any });
@@ -682,7 +706,7 @@ function EditProductModal({
   const [category, setCategory] = useState(product.category || "");
   const [family, setFamily] = useState(product.family || "");
   const [price, setPrice] = useState(product.price?.toString() || "");
-  const [currency, setCurrency] = useState(product.currency || "USD");
+  const [currency, setCurrency] = useState(product.currency || "NGN");
   const [imageUrl, setImageUrl] = useState(product.product_image || "");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -739,8 +763,8 @@ function EditProductModal({
         <div className="flex gap-2">
           <select className="border rounded px-3 py-2 bg-background" value={currency}
             onChange={(e) => setCurrency(e.target.value)}>
-            <option value="USD">USD ($)</option>
             <option value="NGN">Naira (₦)</option>
+            <option value="USD">USD ($)</option>
           </select>
           <input className="w-full border rounded px-3 py-2" type="number" step="0.01" placeholder="Price" value={price}
             onChange={(e) => setPrice(e.target.value)} />
@@ -879,4 +903,3 @@ function OrdersTab({ orders }: { orders: Order[] }) {
     </div>
   );
 }
-
