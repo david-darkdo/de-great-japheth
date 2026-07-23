@@ -41,11 +41,11 @@ export function BottomNav() {
   const signOut = async () => { await supabase.auth.signOut(); setAccountOpen(false); };
 
   // Explicit, mutually exclusive active route checks
-  const isHome = path === "/" || path === "/home";
-  const isShowroom = path === "/showroom" || path.startsWith("/showroom/");
-  const isContact = path === "/contact" || path.startsWith("/contact/");
-  const isCart = path === "/cart" || path.startsWith("/cart/") || path === "/orders" || path.startsWith("/orders/");
-  const isAccount = accountOpen || path === "/auth" || path.startsWith("/auth/") || path === "/admin" || path.startsWith("/admin/");
+  const isHome = path === "/";
+  const isShowroom = path === "/showroom";
+  const isContact = path === "/contact";
+  const isCart = path === "/cart" || path === "/orders";
+  const isAccount = accountOpen || path === "/auth" || path === "/admin";
 
   return (
     <>
@@ -102,9 +102,8 @@ export function BottomNav() {
       >
         <div className="relative max-w-md mx-auto h-16 grid grid-cols-5 items-center px-2">
           {/* Home Tab */}
-          <Link
-            to="/"
-            activeOptions={{ exact: true }}
+          <a
+            href="/"
             className="relative flex flex-col items-center justify-center gap-0.5 h-full"
           >
             <span className={`relative transition-colors ${isHome ? "text-gold" : "text-muted-foreground"}`}>
@@ -113,12 +112,11 @@ export function BottomNav() {
             <span className={`text-[10px] font-medium tracking-wide ${isHome ? "text-gold" : "text-muted-foreground"}`}>
               Home
             </span>
-          </Link>
+          </a>
 
           {/* Contact Tab */}
-          <Link
-            to="/contact"
-            activeOptions={{ exact: true }}
+          <a
+            href="/contact"
             className="relative flex flex-col items-center justify-center gap-0.5 h-full"
           >
             <span className={`relative transition-colors ${isContact ? "text-gold" : "text-muted-foreground"}`}>
@@ -127,13 +125,12 @@ export function BottomNav() {
             <span className={`text-[10px] font-medium tracking-wide ${isContact ? "text-gold" : "text-muted-foreground"}`}>
               Contact
             </span>
-          </Link>
+          </a>
 
           {/* Center Showroom Tab */}
           <div className="flex justify-center">
-            <Link
-              to="/showroom"
-              activeOptions={{ exact: true }}
+            <a
+              href="/showroom"
               aria-label="Showroom"
               className="group relative -mt-9 flex flex-col items-center"
             >
@@ -147,13 +144,12 @@ export function BottomNav() {
               <span className={`mt-1 text-[10px] font-semibold tracking-wide ${isShowroom ? "text-gold" : "text-muted-foreground"}`}>
                 SHOWROOM
               </span>
-            </Link>
+            </a>
           </div>
 
           {/* Cart Tab */}
           <Link
             to="/cart"
-            activeOptions={{ exact: true }}
             className="relative flex flex-col items-center justify-center gap-0.5 h-full"
           >
             <span className={`relative transition-colors ${isCart ? "text-gold" : "text-muted-foreground"}`}>
@@ -198,7 +194,6 @@ function PanelLink({
     <Link
       to={to}
       search={search}
-      activeOptions={{ exact: true }}
       className={`flex items-center gap-3 px-3 py-3 text-sm transition rounded-lg ${
         gold ? "text-gold hover:text-gold/80" : "text-foreground hover:text-gold"
       }`}
