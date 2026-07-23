@@ -1,10 +1,9 @@
 import { createAPIFileRoute } from "@tanstack/react-start/api";
 import { supabase } from "@/integrations/supabase/client";
+import { getProductUrl, getPublicUrl } from "@/lib/url";
 
 export const APIRoute = createAPIFileRoute("/api/sitemap.xml")({
   GET: async () => {
-    const baseUrl = "https://great-japhet.vercel.app";
-
     const { data: products } = await supabase
       .from("products")
       .select("id, created_at")
@@ -18,7 +17,7 @@ export const APIRoute = createAPIFileRoute("/api/sitemap.xml")({
     .map(
       (path) => `
   <url>
-    <loc>${baseUrl}${path}</loc>
+    <loc>${getPublicUrl(path)}</loc>
     <changefreq>daily</changefreq>
     <priority>${path === "" ? "1.0" : "0.8"}</priority>
   </url>`
@@ -28,7 +27,7 @@ export const APIRoute = createAPIFileRoute("/api/sitemap.xml")({
     .map(
       (p) => `
   <url>
-    <loc>${baseUrl}/product/${p.id}</loc>
+    <loc>${getProductUrl(p.id)}</loc>
     <lastmod>${new Date(p.created_at || Date.now()).toISOString().split("T")[0]}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
