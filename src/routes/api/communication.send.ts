@@ -23,13 +23,13 @@ export const APIRoute = createAPIFileRoute("/api/communication/send")({
         process.env.SENDGRID_FROM_EMAIL ||
         process.env.SENDGRID_SENDER_EMAIL ||
         (import.meta as any).env?.VITE_SENDGRID_FROM_EMAIL ||
-        "info@degreatjaphet.com";
+        "greatjaphethenterprises@gmail.com";
       const senderName = fromName || "DE GREAT JAPHET";
 
       if (!apiKey) {
         return new Response(
           JSON.stringify({
-            error: "SENDGRID_API_KEY environment variable is missing on Vercel/server.",
+            error: "SENDGRID_API_KEY environment variable is missing on server/Vercel.",
             provider: "sendgrid",
             status: "failed",
           }),
@@ -50,6 +50,10 @@ export const APIRoute = createAPIFileRoute("/api/communication/send")({
         from: {
           email: senderEmail,
           name: senderName,
+        },
+        reply_to: {
+          email: senderEmail,
+          name: `${senderName} Support`,
         },
         subject: subject,
         content: [
