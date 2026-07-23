@@ -40,11 +40,12 @@ export function BottomNav() {
 
   const signOut = async () => { await supabase.auth.signOut(); setAccountOpen(false); };
 
-  const homeActive = path === "/" || path === "/home";
-  const showroomActive = path === "/showroom" || path.startsWith("/showroom/");
-  const contactActive = path === "/contact" || path.startsWith("/contact/");
-  const cartActive = path === "/cart" || path.startsWith("/cart/") || path === "/orders" || path.startsWith("/orders/");
-  const accountActive = accountOpen || path === "/auth" || path.startsWith("/auth/") || path === "/admin" || path.startsWith("/admin/");
+  // Explicit, mutually exclusive active route checks
+  const isHome = path === "/" || path === "/home";
+  const isShowroom = path === "/showroom" || path.startsWith("/showroom/");
+  const isContact = path === "/contact" || path.startsWith("/contact/");
+  const isCart = path === "/cart" || path.startsWith("/cart/") || path === "/orders" || path.startsWith("/orders/");
+  const isAccount = accountOpen || path === "/auth" || path.startsWith("/auth/") || path === "/admin" || path.startsWith("/admin/");
 
   return (
     <>
@@ -100,10 +101,34 @@ export function BottomNav() {
         aria-label="Bottom navigation"
       >
         <div className="relative max-w-md mx-auto h-16 grid grid-cols-5 items-center px-2">
-          <Tab to="/" icon={Home} label="Home" active={homeActive} />
-          <Tab to="/contact" icon={Phone} label="Contact" active={contactActive} />
+          {/* Home Tab */}
+          <Link
+            to="/"
+            activeOptions={{ exact: true }}
+            className="relative flex flex-col items-center justify-center gap-0.5 h-full"
+          >
+            <span className={`relative transition-colors ${isHome ? "text-gold" : "text-muted-foreground"}`}>
+              <Home size={22} strokeWidth={isHome ? 2.4 : 2} />
+            </span>
+            <span className={`text-[10px] font-medium tracking-wide ${isHome ? "text-gold" : "text-muted-foreground"}`}>
+              Home
+            </span>
+          </Link>
 
-          {/* Center showroom */}
+          {/* Contact Tab */}
+          <Link
+            to="/contact"
+            className="relative flex flex-col items-center justify-center gap-0.5 h-full"
+          >
+            <span className={`relative transition-colors ${isContact ? "text-gold" : "text-muted-foreground"}`}>
+              <Phone size={22} strokeWidth={isContact ? 2.4 : 2} />
+            </span>
+            <span className={`text-[10px] font-medium tracking-wide ${isContact ? "text-gold" : "text-muted-foreground"}`}>
+              Contact
+            </span>
+          </Link>
+
+          {/* Center Showroom Tab */}
           <div className="flex justify-center">
             <Link
               to="/showroom"
@@ -112,60 +137,51 @@ export function BottomNav() {
             >
               <span
                 className={`relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-gold text-[var(--cta-foreground)] shadow-gold ring-4 ring-background transition-transform duration-300 active:scale-90 group-hover:scale-105 ${
-                  showroomActive ? "animate-[glow-pulse_2.4s_ease-in-out_infinite]" : ""
+                  isShowroom ? "animate-[glow-pulse_2.4s_ease-in-out_infinite]" : ""
                 }`}
               >
                 <ShoppingBag size={26} strokeWidth={2.2} />
               </span>
-              <span className={`mt-1 text-[10px] font-semibold tracking-wide ${showroomActive ? "text-gold" : "text-muted-foreground"}`}>
+              <span className={`mt-1 text-[10px] font-semibold tracking-wide ${isShowroom ? "text-gold" : "text-muted-foreground"}`}>
                 SHOWROOM
               </span>
             </Link>
           </div>
 
-          <Tab to="/cart" icon={ShoppingBag} label="Cart" active={cartActive} badge={count} />
+          {/* Cart Tab */}
+          <Link
+            to="/cart"
+            className="relative flex flex-col items-center justify-center gap-0.5 h-full"
+          >
+            <span className={`relative transition-colors ${isCart ? "text-gold" : "text-muted-foreground"}`}>
+              <ShoppingBag size={22} strokeWidth={isCart ? 2.4 : 2} />
+              {count > 0 && (
+                <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-gradient-gold text-[9px] font-bold text-[var(--cta-foreground)] flex items-center justify-center">
+                  {count}
+                </span>
+              )}
+            </span>
+            <span className={`text-[10px] font-medium tracking-wide ${isCart ? "text-gold" : "text-muted-foreground"}`}>
+              Cart
+            </span>
+          </Link>
 
+          {/* Account Button */}
           <button
             onClick={() => setAccountOpen((v) => !v)}
             aria-label="Customer account"
             className="flex flex-col items-center justify-center gap-0.5 h-full"
           >
-            <span className={`transition-colors ${accountActive ? "text-gold" : "text-muted-foreground"}`}>
-              <User size={22} strokeWidth={accountActive ? 2.4 : 2} />
+            <span className={`transition-colors ${isAccount ? "text-gold" : "text-muted-foreground"}`}>
+              <User size={22} strokeWidth={isAccount ? 2.4 : 2} />
             </span>
-            <span className={`text-[10px] font-medium tracking-wide ${accountActive ? "text-gold" : "text-muted-foreground"}`}>
+            <span className={`text-[10px] font-medium tracking-wide ${isAccount ? "text-gold" : "text-muted-foreground"}`}>
               Customer
             </span>
           </button>
         </div>
       </nav>
     </>
-  );
-}
-
-function Tab({
-  to, icon: Icon, label, active, badge,
-}: {
-  to: string; icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  label: string; active: boolean; badge?: number;
-}) {
-  return (
-    <Link
-      to={to}
-      className="relative flex flex-col items-center justify-center gap-0.5 h-full"
-    >
-      <span className={`relative transition-colors ${active ? "text-gold" : "text-muted-foreground"}`}>
-        <Icon size={22} strokeWidth={active ? 2.4 : 2} />
-        {badge != null && badge > 0 && (
-          <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-gradient-gold text-[9px] font-bold text-[var(--cta-foreground)] flex items-center justify-center">
-            {badge}
-          </span>
-        )}
-      </span>
-      <span className={`text-[10px] font-medium tracking-wide ${active ? "text-gold" : "text-muted-foreground"}`}>
-        {label}
-      </span>
-    </Link>
   );
 }
 
