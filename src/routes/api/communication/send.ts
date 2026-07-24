@@ -10,6 +10,15 @@ function getEnvVar(name: string): string | undefined {
   return undefined;
 }
 
+function stripHtml(html: string): string {
+  return (html || "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export const Route = createFileRoute("/api/communication/send")({
   server: {
     handlers: {
@@ -50,7 +59,9 @@ export const Route = createFileRoute("/api/communication/send")({
             );
           }
 
-          // SendGrid v3 Mail Send Payload
+          const plainText = bodyText || stripHtml(bodyHtml) || "Notification from DE GREAT JAPHET";
+
+          // SendGrid v3 Mail Send Payload — Strict MIME Order: text/plain FIRST, text/html SECOND
           const payload = {
             personalizations: [
               {
@@ -67,10 +78,32 @@ export const Route = createFileRoute("/api/communication/send")({
             },
             subject: subject,
             content: [
+              { type: "text/plain", value: plainText },
               { type: "text/html", value: bodyHtml },
-              { type: "text/plain", value: bodyText || bodyHtml.replace(/<[^>]*>/g, "") },
             ],
           };
+
+          // TASK 4: Local payload validation
+          if (
+            !payload.from.email ||
+            !payload.personalizations[0]?.to[0]?.email ||
+            !payload.subject ||
+            payload.content[0]?.type !== "text/plain" ||
+            payload.content[1]?.type !== "text/html"
+          ) {
+            return Response.json(
+              { error: "Invalid SendGrid payload structure generated", provider: "sendgrid", status: "failed" },
+              { status: 400 }
+            );
+          }
+
+          // TASK 5: Non-sensitive debug logging
+          console.log("[SendGrid API] Dispatching payload:", {
+            senderConfigured: !!senderEmail,
+            recipientCount: 1,
+            subject: payload.subject,
+            contentTypes: payload.content.map((c) => c.type),
+          });
 
           const sgRes = await fetch("https://api.sendgrid.com/v3/mail/send", {
             method: "POST",
@@ -95,6 +128,7 @@ export const Route = createFileRoute("/api/communication/send")({
             });
           } else {
             const errorText = await sgRes.text().catch(() => "Unknown SendGrid Error");
+            console.error(`[SendGrid Error] HTTP ${sgRes.status}:`, errorText);
             return Response.json(
               {
                 error: `SendGrid HTTP ${sgRes.status}: ${errorText}`,
@@ -106,6 +140,7 @@ export const Route = createFileRoute("/api/communication/send")({
             );
           }
         } catch (err: any) {
+          console.error("[SendGrid Exception]:", err);
           return Response.json(
             { error: err.message || "Failed to deliver email via SendGrid" },
             { status: 500 }
