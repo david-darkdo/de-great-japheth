@@ -27,7 +27,7 @@ import { Route as EmailTrackShowroomRouteImport } from './routes/email.track.sho
 import { Route as EmailTrackCartRouteImport } from './routes/email.track.cart'
 import { Route as ApiOrdersCreateRouteImport } from './routes/api/orders.create'
 import { Route as ApiCommunicationSendRouteImport } from './routes/api/communication/send'
-import { Route as ApiAiProductIntelligenceRouteImport } from './routes/api/ai.product-intelligence'
+import { Route as ApiAiProductIntelligenceRouteImport } from './routes/api/ai/product-intelligence'
 import { Route as ApiEmailAdminRouteImport } from './routes/api/email/admin'
 import { Route as ApiPublicWebhooksSendgridRouteImport } from './routes/api/public/webhooks/sendgrid'
 import { Route as ApiPublicHooksEmailMonthlyRouteImport } from './routes/api/public/hooks/email-monthly'
