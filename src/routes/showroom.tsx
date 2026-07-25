@@ -38,6 +38,11 @@ type Product = {
   search_keywords?: string | null;
   search_tags?: string | null;
   brand?: string | null;
+  seo_keywords?: string[] | string | null;
+  canonical_product_name?: string | null;
+  related_terms?: string[] | string | null;
+  product_summary?: string | null;
+  slug?: string | null;
 };
 
 function ShowroomPage() {
@@ -56,7 +61,7 @@ function ShowroomPage() {
   useEffect(() => {
     supabase
       .from("products")
-      .select("id, product_name, category, product_type, product_image, price, item_code, family, full_details, search_keywords, search_tags, brand")
+      .select("id, product_name, category, product_type, product_image, price, item_code, family, full_details, search_keywords, search_tags, brand, seo_keywords, canonical_product_name, related_terms, product_summary, slug")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setProducts((data as Product[]) || []);
@@ -71,16 +76,43 @@ function ShowroomPage() {
 
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase().trim();
+
+      // BUILD J.1 - LEVEL 1: Manual Product Data (Highest Priority & Authoritative)
       const nameMatch = (p.product_name || "").toLowerCase().includes(q);
+      const typeMatch = (p.product_type || "").toLowerCase().includes(q);
       const catMatch = (p.category || "").toLowerCase().includes(q);
       const familyMatch = (p.family || "").toLowerCase().includes(q);
-      const detailsMatch = (p.full_details || "").toLowerCase().includes(q);
-      const kwMatch = (p.search_keywords || "").toLowerCase().includes(q);
-      const tagMatch = (p.search_tags || "").toLowerCase().includes(q);
       const brandMatch = (p.brand || "").toLowerCase().includes(q);
       const codeMatch = (p.item_code || "").toLowerCase().includes(q);
 
-      return nameMatch || catMatch || familyMatch || detailsMatch || kwMatch || tagMatch || brandMatch || codeMatch;
+      if (nameMatch || typeMatch || catMatch || familyMatch || brandMatch || codeMatch) {
+        return true;
+      }
+
+      // BUILD J.1 - LEVEL 2: AI Product Intelligence (Enhancement)
+      const kwMatch = (p.search_keywords || "").toLowerCase().includes(q);
+      const tagMatch = (p.search_tags || "").toLowerCase().includes(q);
+      const canonicalMatch = (p.canonical_product_name || "").toLowerCase().includes(q);
+      const detailsMatch = (p.full_details || "").toLowerCase().includes(q);
+      const summaryMatch = (p.product_summary || "").toLowerCase().includes(q);
+
+      const seoKwMatch = Array.isArray(p.seo_keywords)
+        ? p.seo_keywords.some((k: string) => (k || "").toLowerCase().includes(q))
+        : (p.seo_keywords || "").toLowerCase().includes(q);
+
+      const relatedMatch = Array.isArray(p.related_terms)
+        ? p.related_terms.some((t: string) => (t || "").toLowerCase().includes(q))
+        : (p.related_terms || "").toLowerCase().includes(q);
+
+      return (
+        kwMatch ||
+        tagMatch ||
+        canonicalMatch ||
+        detailsMatch ||
+        summaryMatch ||
+        seoKwMatch ||
+        relatedMatch
+      );
     });
   }, [products, activeCategory, searchQuery]);
 
