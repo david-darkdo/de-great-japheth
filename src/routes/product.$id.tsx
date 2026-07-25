@@ -10,29 +10,36 @@ import { getProductUrl, getPublicUrl } from "@/lib/url";
 export const Route = createFileRoute("/product/$id")({
   head: ({ loaderData }: any) => {
     const prod = loaderData;
-    const title = prod?.product_name ? `${prod.product_name} | DE GREAT JAPHET` : "Product | DE GREAT JAPHET";
-    const desc = prod?.full_details || "Premium building materials and finishing for modern interiors by De Great Japhet.";
+    const title = prod?.seo_title || (prod?.product_name ? `${prod.product_name} | DE GREAT JAPHET` : "Product | DE GREAT JAPHET");
+    const desc = prod?.meta_description || prod?.full_details || "Premium building materials and finishing for modern interiors by De Great Japhet.";
     const img = prod?.product_image || getPublicUrl("/hero-interior.jpg");
-    const canonical = getProductUrl(prod?.id || "");
+    const canonical = getProductUrl(prod?.slug || prod?.id || "");
+    const keywords = Array.isArray(prod?.seo_keywords) ? prod.seo_keywords.join(", ") : (prod?.seo_keywords || "");
+
+    const metaList: any[] = [
+      { title },
+      { name: "description", content: desc },
+
+      // Open Graph
+      { property: "og:title", content: title },
+      { property: "og:description", content: desc },
+      { property: "og:image", content: img },
+      { property: "og:url", content: canonical },
+      { property: "og:type", content: "product" },
+
+      // Twitter Card
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: desc },
+      { name: "twitter:image", content: img },
+    ];
+
+    if (keywords) {
+      metaList.push({ name: "keywords", content: keywords });
+    }
 
     return {
-      meta: [
-        { title },
-        { name: "description", content: desc },
-
-        // Open Graph
-        { property: "og:title", content: title },
-        { property: "og:description", content: desc },
-        { property: "og:image", content: img },
-        { property: "og:url", content: canonical },
-        { property: "og:type", content: "product" },
-
-        // Twitter Card
-        { name: "twitter:card", content: "summary_large_image" },
-        { name: "twitter:title", content: title },
-        { name: "twitter:description", content: desc },
-        { name: "twitter:image", content: img },
-      ],
+      meta: metaList,
       links: [
         { rel: "canonical", href: canonical },
       ],
@@ -44,8 +51,7 @@ export const Route = createFileRoute("/product/$id")({
     if (isUuid) {
       query = query.eq("id", params.id);
     } else {
-      const cleanSlug = params.id.replace(/-/g, " ");
-      query = query.or(`item_code.eq.${params.id},product_name.ilike.%${cleanSlug}%`);
+      query = query.or(`slug.eq.${params.id},item_code.eq.${params.id},product_name.ilike.%${params.id.replace(/-/g, " ")}%`);
     }
     const { data } = await query.limit(1).maybeSingle();
     return data;
@@ -69,12 +75,18 @@ type Product = {
   brand?: string | null;
   manufacturer?: string | null;
   product_code?: string | null;
+  seo_title?: string | null;
+  meta_description?: string | null;
+  seo_keywords?: string[] | string | null;
+  slug?: string | null;
+  canonical_product_name?: string | null;
+  related_terms?: string[] | string | null;
+  product_summary?: string | null;
 };
 
 function ProductPage() {
   const { id } = Route.useParams();
   const loaderProduct = Route.useLoaderData();
-  const nav = useNavigate();
 
   const [product, setProduct] = useState<Product | null>(loaderProduct as Product | null);
   const [related, setRelated] = useState<Product[]>([]);
@@ -83,15 +95,14 @@ function ProductPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!product || (product.id !== id && !id.includes(product.id))) {
+    if (!product || (product.id !== id && product.slug !== id && !id.includes(product.id))) {
       setLoading(true);
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
       let query = supabase.from("products").select("*");
       if (isUuid) {
         query = query.eq("id", id);
       } else {
-        const cleanSlug = id.replace(/-/g, " ");
-        query = query.or(`item_code.eq.${id},product_name.ilike.%${cleanSlug}%`);
+        query = query.or(`slug.eq.${id},item_code.eq.${id},product_name.ilike.%${id.replace(/-/g, " ")}%`);
       }
       query.limit(1).maybeSingle().then(({ data }) => {
         setProduct(data as Product | null);
@@ -126,7 +137,7 @@ function ProductPage() {
     );
   }
 
-  const productUrl = getProductUrl(product.id);
+  const productUrl = getProductUrl(product.slug || product.id);
   const formattedPrice = product.price != null ? `₦${Number(product.price).toLocaleString()}` : "Price on Request";
 
   const waMessage = `Hello Great Japhet,\n\nI am interested in this product.\n\nProduct:\n${product.product_name}\n\nPrice:\n${formattedPrice}\n\nProduct Link:\n${productUrl}\n\nPlease confirm availability.\n\nThank you.`;
@@ -136,9 +147,9 @@ function ProductPage() {
   const jsonLd = {
     "@context": "https://schema.org/",
     "@type": "Product",
-    "name": product.product_name,
+    "name": product.canonical_product_name || product.product_name,
     "image": [product.product_image, product.finished_image].filter(Boolean),
-    "description": product.full_details || product.product_name,
+    "description": product.meta_description || product.full_details || product.product_name,
     "sku": product.item_code || product.product_code || product.id,
     "brand": {
       "@type": "Brand",
