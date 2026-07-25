@@ -1,3 +1,4 @@
+import { generateProductIntelligence } from "@/lib/productIntelligence";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,106 +100,88 @@ async function openSystemImagePicker(setFile: ImageFileSetter, fallbackInput: HT
 
 function AdminDashboard() {
   const navigate = useNavigate();
-  const [authChecked, setAuthChecked] = useState(false);
-  const [authorized, setAuthorized] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("dashboard");
 
+  const [tab, setTab] = useState<Tab>("dashboard");
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [authed, setAuthed] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Auth + role check
+  const loadEmailData = useCallback(async () => {
+    const [tplData, logData] = await Promise.all([
+      CommunicationEngine.getTemplates(),
+      CommunicationEngine.getLogs(),
+    ]);
+    setEmailTemplates((tplData as EmailTemplate[]) || []);
+    setEmailLogs((logData as EmailLog[]) || []);
+  }, []);
+
   useEffect(() => {
-    (async () => {
-      const { data: sess } = await supabase.auth.getSession();
-      const user = sess.session?.user;
-      if (!user) {
-        navigate({ to: "/system-login" });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate({ to: "/system-login", search: { redirect: "/admin" } });
         return;
       }
-      setUserEmail(user.email ?? null);
-
-      const { data: roles } = await supabase
+      supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id);
-
-      const ok = !!roles?.some((r: any) => ["super_admin", "staff"].includes(r.role));
-      if (!ok) {
-        await supabase.auth.signOut();
-        navigate({ to: "/system-login" });
-        return;
-      }
-      setAuthorized(true);
-      setAuthChecked(true);
-    })();
+        .eq("user_id", session.user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!data || (data.role !== "admin" && data.role !== "super_admin")) {
+            navigate({ to: "/system-login", search: { redirect: "/admin" } });
+          } else {
+            setAuthed(true);
+            setLoading(false);
+          }
+        });
+    });
   }, [navigate]);
 
-  const loadProducts = useCallback(async () => {
-    const { data } = await supabase
+  const loadProducts = () =>
+    supabase
       .from("products")
       .select("*")
-      .order("created_at", { ascending: false });
-    setProducts((data as Product[]) || []);
-  }, []);
-
-  const loadCustomers = useCallback(async () => {
-    const { data } = await supabase
-      .from("customers")
-      .select("id, email, created_at, full_name, phone, provider, last_login_at, user_id")
-      .order("created_at", { ascending: false });
-    setCustomers((data as Customer[]) || []);
-  }, []);
-
-  const loadLogs = useCallback(async () => {
-    const { data } = await supabase
-      .from("activity_logs")
-      .select("id, action, user_email, created_at, details")
       .order("created_at", { ascending: false })
-      .limit(50);
-    setLogs((data as ActivityLog[]) || []);
-  }, []);
+      .then(({ data }) => setProducts((data as Product[]) || []));
 
-  const loadRoles = useCallback(async () => {
-    const { data } = await supabase
+  const loadCustomers = () =>
+    supabase
+      .from("customers")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setCustomers((data as Customer[]) || []));
+
+  const loadLogs = () =>
+    supabase
+      .from("activity_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .then(({ data }) => setLogs((data as ActivityLog[]) || []));
+
+  const loadRoles = () =>
+    supabase
       .from("user_roles")
-      .select("id, user_id, email, role, created_at")
-      .order("created_at", { ascending: false });
-    setRoles((data as UserRole[]) || []);
-  }, []);
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setRoles((data as UserRole[]) || []));
 
-  const loadOrders = useCallback(async () => {
-    const { data } = await supabase
+  const loadOrders = () =>
+    supabase
       .from("orders")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(200);
-    setOrders((data as Order[]) || []);
-  }, []);
-
-  const loadEmailData = useCallback(async () => {
-    const { data: logsData } = await supabase
-      .from("email_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(100);
-    setEmailLogs((logsData as EmailLog[]) || []);
-
-    const { data: tplData } = await supabase
-      .from("email_templates")
-      .select("*")
-      .order("name", { ascending: true });
-    setEmailTemplates((tplData as EmailTemplate[]) || []);
-  }, []);
+      .then(({ data }) => setOrders((data as Order[]) || []));
 
   useEffect(() => {
-    if (!authorized) return;
+    if (!authed) return;
     loadProducts();
     loadCustomers();
     loadLogs();
@@ -206,7 +189,7 @@ function AdminDashboard() {
     loadOrders();
     loadEmailData();
 
-    const ch = supabase
+    const sub = supabase
       .channel("admin-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadProducts())
       .on("postgres_changes", { event: "*", schema: "public", table: "customers" }, () => loadCustomers())
@@ -216,67 +199,70 @@ function AdminDashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "email_logs" }, () => loadEmailData())
       .on("postgres_changes", { event: "*", schema: "public", table: "email_templates" }, () => loadEmailData())
       .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
-  }, [authorized, loadProducts, loadCustomers, loadLogs, loadRoles, loadOrders, loadEmailData]);
 
-  const signOut = async () => {
+    return () => {
+      supabase.removeChannel(sub);
+    };
+  }, [authed, loadEmailData]);
+
+  const deleteProduct = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    await supabase.from("products").delete().eq("id", id);
+    loadProducts();
+  };
+
+  const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/system-login" });
   };
 
-  const deleteProduct = async (id: string) => {
-    if (!confirm("Delete this product?")) return;
-    setProducts((p) => p.filter((x) => x.id !== id));
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) {
-      alert("Delete failed: " + error.message);
-      loadProducts();
-    }
-  };
-
-  if (!authChecked) {
-    return <div className="min-h-screen flex items-center justify-center">Loading Command Center...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        Checking admin permissions...
+      </div>
+    );
   }
 
-  const whatsappClicks = logs.filter((l) =>
-    (l.action || "").toLowerCase().includes("whatsapp"),
-  ).length;
-
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Command Center</h1>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-muted-foreground hidden sm:inline">{userEmail}</span>
-            <button onClick={signOut} className="underline">Sign out</button>
-          </div>
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <header className="border-b border-border bg-card px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-xl font-bold text-shimmer">De Great Japhet Admin</h1>
+          <p className="text-xs text-muted-foreground">Showroom Catalog & Customer Operating System</p>
         </div>
-        <nav className="max-w-6xl mx-auto px-6 flex gap-2 overflow-x-auto">
+        <button
+          onClick={handleSignOut}
+          className="text-xs text-muted-foreground hover:text-foreground border border-border rounded px-3 py-1.5"
+        >
+          Sign Out
+        </button>
+      </header>
+
+      <div className="border-b border-border bg-card/50 px-6">
+        <nav className="flex gap-4 overflow-x-auto">
           {(["dashboard", "products", "upload", "orders", "communication", "customers", "users", "analytics"] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`py-2 px-3 text-sm border-b-2 capitalize flex items-center gap-1.5 ${
+              className={`py-3 text-sm border-b-2 capitalize transition-colors whitespace-nowrap ${
                 tab === t ? "border-primary font-medium text-gold" : "border-transparent text-muted-foreground"
               }`}
             >
-              {t === "communication" && <Mail size={15} />}
-              {t === "communication" ? "Communication Center" : t}
+              {t === "communication" ? "Customer Communication" : t}
             </button>
           ))}
         </nav>
-      </header>
+      </div>
 
-      <main className="max-w-6xl mx-auto p-6">
+      <main className="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
         {tab === "dashboard" && (
           <DashboardTab
-            productCount={products.length}
-            customerCount={customers.length}
-            whatsappClicks={whatsappClicks}
-            emailsSent={emailLogs.length}
+            products={products}
+            customers={customers}
+            orders={orders}
+            logs={logs}
+            onNav={setTab}
           />
         )}
         {tab === "products" && (
@@ -289,7 +275,7 @@ function AdminDashboard() {
             templates={emailTemplates}
             logs={emailLogs}
             customers={customers}
-            onReload={loadEmailData}
+            onRefresh={loadEmailData}
           />
         )}
         {tab === "customers" && <CustomersTab customers={customers} logs={logs} />}
@@ -311,33 +297,78 @@ function AdminDashboard() {
   );
 }
 
-function StatCard({ label, value, sub }: { label: string; value: number | string; sub?: string }) {
-  return (
-    <div className="border rounded-lg p-6 bg-card">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="text-3xl font-semibold mt-2">{value}</p>
-      {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
-    </div>
-  );
-}
-
 function DashboardTab({
-  productCount,
-  customerCount,
-  whatsappClicks,
-  emailsSent,
+  products,
+  customers,
+  orders,
+  logs,
+  onNav,
 }: {
-  productCount: number;
-  customerCount: number;
-  whatsappClicks: number;
-  emailsSent: number;
+  products: Product[];
+  customers: Customer[];
+  orders: Order[];
+  logs: ActivityLog[];
+  onNav: (t: Tab) => void;
 }) {
+  const totalVal = products.reduce((s, p) => s + (p.price ?? 0), 0);
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-      <StatCard label="Total Products" value={productCount} />
-      <StatCard label="Total Customers" value={customerCount} />
-      <StatCard label="WhatsApp Clicks" value={whatsappClicks} />
-      <StatCard label="Emails Dispatched" value={emailsSent} sub="SendGrid Engine" />
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="border rounded-xl p-4 bg-card">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Products</p>
+          <p className="text-2xl font-bold mt-1 text-gold">{products.length}</p>
+        </div>
+        <div className="border rounded-xl p-4 bg-card">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Customers</p>
+          <p className="text-2xl font-bold mt-1 text-gold">{customers.length}</p>
+        </div>
+        <div className="border rounded-xl p-4 bg-card">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Orders / Enquiries</p>
+          <p className="text-2xl font-bold mt-1 text-gold">{orders.length}</p>
+        </div>
+        <div className="border rounded-xl p-4 bg-card">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Catalog Value</p>
+          <p className="text-2xl font-bold mt-1 text-gold">₦{totalVal.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="border rounded-xl p-5 bg-card space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Quick Actions</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => onNav("upload")}
+              className="p-3 border rounded-lg hover:border-gold hover:text-gold text-xs text-left transition flex items-center gap-2"
+            >
+              <Sparkles size={16} className="text-gold" /> Upload New Product
+            </button>
+            <button
+              onClick={() => onNav("communication")}
+              className="p-3 border rounded-lg hover:border-gold hover:text-gold text-xs text-left transition flex items-center gap-2"
+            >
+              <Mail size={16} className="text-gold" /> Email Operating System
+            </button>
+          </div>
+        </div>
+
+        <div className="border rounded-xl p-5 bg-card">
+          <h3 className="text-sm font-semibold mb-3">Recent Activity</h3>
+          {logs.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No recent activity recorded.</p>
+          ) : (
+            <div className="space-y-2">
+              {logs.slice(0, 5).map((l) => (
+                <div key={l.id} className="text-xs flex justify-between border-b pb-1.5 border-border/40">
+                  <span className="font-medium text-foreground">{l.action}</span>
+                  <span className="text-muted-foreground">{new Date(l.created_at).toLocaleTimeString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -351,62 +382,77 @@ function ProductsTab({
   onEdit: (p: Product) => void;
   onDelete: (id: string) => void;
 }) {
-  if (products.length === 0)
-    return <p className="text-muted-foreground">No products yet.</p>;
+  const [q, setQ] = useState("");
+  const filtered = products.filter(
+    (p) =>
+      p.product_name.toLowerCase().includes(q.toLowerCase()) ||
+      (p.category || "").toLowerCase().includes(q.toLowerCase()) ||
+      (p.family || "").toLowerCase().includes(q.toLowerCase())
+  );
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {products.map((p) => (
-        <div key={p.id} className="border rounded-lg overflow-hidden">
-          {p.product_image && (
-            <img src={p.product_image} alt={p.product_name} className="w-full aspect-square object-cover" />
-          )}
-          <div className="p-3 space-y-1">
-            <h3 className="font-medium truncate">{p.product_name}</h3>
-            <p className="text-xs text-muted-foreground">
-              {p.category || "—"}{p.family ? ` · ${p.family}` : ""}
-            </p>
-            <p className="text-sm">{p.price != null ? `${p.currency === "USD" ? "$" : "₦"}${Number(p.price).toLocaleString()}` : "—"}</p>
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => onEdit(p)} className="flex-1 border rounded py-1 text-sm">Edit</button>
-              <button
-                onClick={() => onDelete(p.id)}
-                className="flex-1 bg-destructive text-destructive-foreground rounded py-1 text-sm"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-4">
+        <input
+          type="text"
+          placeholder="Search catalog products..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="border rounded-md px-3 py-2 text-sm bg-background w-full max-w-sm"
+        />
+        <p className="text-xs text-muted-foreground">{filtered.length} products found</p>
+      </div>
+
+      <div className="border rounded-xl overflow-hidden bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left">
+            <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
+              <tr>
+                <th className="p-3">Image</th>
+                <th className="p-3">Product Name</th>
+                <th className="p-3">Category</th>
+                <th className="p-3">Family</th>
+                <th className="p-3">Price</th>
+                <th className="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {filtered.map((p) => (
+                <tr key={p.id} className="hover:bg-muted/20">
+                  <td className="p-3">
+                    {p.product_image ? (
+                      <img src={p.product_image} alt={p.product_name} className="w-10 h-10 object-cover rounded border" />
+                    ) : (
+                      <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-[9px]">No img</div>
+                    )}
+                  </td>
+                  <td className="p-3 font-medium text-foreground">{p.product_name}</td>
+                  <td className="p-3 text-muted-foreground">{p.category || "—"}</td>
+                  <td className="p-3 text-muted-foreground">{p.family || "—"}</td>
+                  <td className="p-3 text-gold font-semibold">
+                    {p.price != null ? `₦${Number(p.price).toLocaleString()}` : "Price on Request"}
+                  </td>
+                  <td className="p-3 text-right space-x-2">
+                    <button onClick={() => onEdit(p)} className="text-blue-500 hover:underline">Edit</button>
+                    <button onClick={() => onDelete(p.id)} className="text-red-500 hover:underline">Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
 async function uploadImage(file: File): Promise<string> {
-  try {
-    const ext = (file.name.split(".").pop() || "png").toLowerCase();
-    const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    
-    const { data: upData, error: upErr } = await supabase.storage
-      .from("product-images")
-      .upload(filename, file, { upsert: true });
-
-    if (!upErr && upData) {
-      const { data: urlData } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(filename);
-      if (urlData?.publicUrl) return urlData.publicUrl;
-    }
-  } catch (sErr) {
-    console.warn("[upload] Storage error, falling back to API", sErr);
-  }
-
-  const fd = new FormData();
-  fd.append("file", file);
-  const res = await fetch("/api/upload-image", { method: "POST", body: fd });
-  const json = await res.json();
-  if (!res.ok || !json.url) throw new Error(json.error || "Image upload failed");
-  return json.url;
+  const ext = file.name.split(".").pop();
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from("product-images").upload(path, file);
+  if (error) throw error;
+  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+  return data.publicUrl;
 }
 
 function UploadTab({ onDone }: { onDone: () => void }) {
@@ -418,35 +464,33 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   const [description, setDescription] = useState("");
   const [searchKeywords, setSearchKeywords] = useState("");
   const [searchTags, setSearchTags] = useState("");
-  
+
+  // AI Product Intelligence & Google SEO State
+  const [generatingAi, setGeneratingAi] = useState(false);
+  const [showGoogleSeo, setShowGoogleSeo] = useState(false);
+  const [showPromptManager, setShowPromptManager] = useState(false);
+  const [seoTitle, setSeoTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [seoKeywords, setSeoKeywords] = useState("");
+  const [slug, setSlug] = useState("");
+  const [canonicalProductName, setCanonicalProductName] = useState("");
+  const [relatedTerms, setRelatedTerms] = useState("");
+  const [productSummary, setProductSummary] = useState("");
+  const [aiConfidence, setAiConfidence] = useState<number | null>(null);
+
   const [initialFile, setInitialFile] = useState<File | null>(null);
   const [finishedFile, setFinishedFile] = useState<File | null>(null);
-  const [initialPreview, setInitialPreview] = useState<string | null>(null);
-  const [finishedPreview, setFinishedPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
   const initRef = useRef<HTMLInputElement>(null);
   const finRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!initialFile) return setInitialPreview(null);
-    const u = URL.createObjectURL(initialFile);
-    setInitialPreview(u);
-    return () => URL.revokeObjectURL(u);
-  }, [initialFile]);
-
-  useEffect(() => {
-    if (!finishedFile) return setFinishedPreview(null);
-    const u = URL.createObjectURL(finishedFile);
-    setFinishedPreview(u);
-    return () => URL.revokeObjectURL(u);
-  }, [finishedFile]);
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return setStatus("Name required.");
-    if (!category) return setStatus("Select a category.");
-    if (!initialFile) return setStatus("Select the initial product image.");
+    if (!initialFile) {
+      alert("Initial product image is required.");
+      return;
+    }
     setBusy(true);
     setStatus("Uploading initial image...");
     try {
@@ -470,13 +514,22 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           full_details: description || null,
           search_keywords: searchKeywords.trim() || null,
           search_tags: searchTags.trim() || null,
+          seo_title: seoTitle || null,
+          meta_description: metaDescription || null,
+          seo_keywords: seoKeywords ? seoKeywords.split(",").map(s => s.trim()).filter(Boolean) : null,
+          slug: slug || null,
+          canonical_product_name: canonicalProductName || null,
+          related_terms: relatedTerms ? relatedTerms.split(",").map(s => s.trim()).filter(Boolean) : null,
+          product_summary: productSummary || null,
+          ai_confidence: aiConfidence || null,
         })
         .select()
         .single();
       if (error) throw error;
       setStatus("✓ Product uploaded successfully!");
       setName(""); setCategory(""); setFamily(""); setPrice(""); setCurrency("NGN"); setDescription("");
-      setSearchKeywords(""); setSearchTags("");
+      setSearchKeywords(""); setSearchTags(""); setSeoTitle(""); setMetaDescription(""); setSeoKeywords("");
+      setSlug(""); setCanonicalProductName(""); setRelatedTerms(""); setProductSummary(""); setAiConfidence(null);
       setInitialFile(null); setFinishedFile(null);
       if (initRef.current) initRef.current.value = "";
       if (finRef.current) finRef.current.value = "";
@@ -488,8 +541,6 @@ function UploadTab({ onDone }: { onDone: () => void }) {
       setBusy(false);
     }
   };
-
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "") || "product-name";
 
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-6 border rounded-xl p-6 bg-card">
@@ -551,13 +602,176 @@ function UploadTab({ onDone }: { onDone: () => void }) {
           />
         </div>
 
-        <textarea
-          placeholder="Unified Product Description (Used by Product Page, Google SEO & Search)"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={4}
-          className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-        />
+        {/* AI Generation Action */}
+        <div className="p-4 rounded-xl border border-[oklch(0.82_0.14_86/0.25)] bg-card/60 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Sparkles className="text-gold" size={14} /> Product Intelligence Engine
+              </p>
+              <p className="text-[11px] text-muted-foreground">Generate authoritative Google SEO & Showroom metadata in one click.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPromptManager(true)}
+                className="px-2.5 py-1.5 rounded-md border border-border text-[11px] font-medium hover:border-gold hover:text-gold transition"
+              >
+                Edit AI Prompt
+              </button>
+              <button
+                type="button"
+                disabled={generatingAi || !name.trim()}
+                onClick={async () => {
+                  setGeneratingAi(true);
+                  try {
+                    let imgUrl: string | undefined = undefined;
+                    if (initialFile) {
+                      imgUrl = await uploadImage(initialFile);
+                    }
+                    const aiResult = await generateProductIntelligence({
+                      productName: name,
+                      category,
+                      family,
+                      price: price ? Number(price) : undefined,
+                      currency,
+                      description,
+                      productImage: imgUrl,
+                    });
+
+                    setDescription(aiResult.description);
+                    setSeoTitle(aiResult.seo_title);
+                    setMetaDescription(aiResult.meta_description);
+                    setSeoKeywords(Array.isArray(aiResult.seo_keywords) ? aiResult.seo_keywords.join(", ") : aiResult.seo_keywords || "");
+                    setSlug(aiResult.slug);
+                    setSearchKeywords(Array.isArray(aiResult.search_keywords) ? aiResult.search_keywords.join(", ") : aiResult.search_keywords || "");
+                    setCanonicalProductName(aiResult.canonical_product_name);
+                    setRelatedTerms(Array.isArray(aiResult.related_terms) ? aiResult.related_terms.join(", ") : aiResult.related_terms || "");
+                    setProductSummary(aiResult.product_summary);
+                    setAiConfidence(aiResult.confidence);
+                  } catch (err: any) {
+                    alert("AI Generation Error: " + (err.message || "Failed to generate product intelligence"));
+                  } finally {
+                    setGeneratingAi(false);
+                  }
+                }}
+                className="px-3 py-1.5 rounded-md bg-gradient-gold text-[var(--cta-foreground)] font-semibold text-xs flex items-center gap-1.5 hover:opacity-90 disabled:opacity-50 transition shadow-gold"
+              >
+                <Sparkles size={13} className={generatingAi ? "animate-spin" : ""} />
+                {generatingAi ? "Generating..." : "Generate Product Intelligence"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold mb-1">Product Description</label>
+          <textarea
+            placeholder="Unified Product Description (Generated by AI or entered manually)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+          />
+        </div>
+
+        {/* Collapsible Google & Search Intelligence Section */}
+        <div className="border rounded-xl p-3 bg-muted/20">
+          <button
+            type="button"
+            onClick={() => setShowGoogleSeo(!showGoogleSeo)}
+            className="w-full flex items-center justify-between text-xs font-semibold text-foreground hover:text-gold transition"
+          >
+            <span className="flex items-center gap-1.5">
+              <Globe size={14} className="text-gold" /> Google & Search Intelligence
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              {showGoogleSeo ? "▲ Collapse" : "▼ Expand to Review / Edit"}
+            </span>
+          </button>
+
+          {showGoogleSeo && (
+            <div className="mt-3 space-y-3 pt-3 border-t border-border/60 text-xs">
+              <div>
+                <label className="block text-[11px] font-medium mb-1">SEO Title (Google Title)</label>
+                <input
+                  type="text"
+                  value={seoTitle}
+                  onChange={(e) => setSeoTitle(e.target.value)}
+                  placeholder="e.g. Luxury Virony Marble Tile | DE GREAT JAPHET"
+                  className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium mb-1">Meta Description (Google Snippet)</label>
+                <textarea
+                  rows={2}
+                  value={metaDescription}
+                  onChange={(e) => setMetaDescription(e.target.value)}
+                  placeholder="e.g. Premium marble tile in Lagos, Nigeria..."
+                  className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-medium mb-1">Product URL Slug</label>
+                  <input
+                    type="text"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    placeholder="e.g. luxury-virony-marble-tile"
+                    className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium mb-1">Search Alias / Canonical Name</label>
+                  <input
+                    type="text"
+                    value={canonicalProductName}
+                    onChange={(e) => setCanonicalProductName(e.target.value)}
+                    placeholder="e.g. Virony White Porcelain Tile"
+                    className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium mb-1">Google SEO Keywords (Comma Separated)</label>
+                <input
+                  type="text"
+                  value={seoKeywords}
+                  onChange={(e) => setSeoKeywords(e.target.value)}
+                  placeholder="e.g. tiles, marble tile, virony tile"
+                  className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium mb-1">Related Search Terms (Hidden Search Intelligence)</label>
+                <input
+                  type="text"
+                  value={relatedTerms}
+                  onChange={(e) => setRelatedTerms(e.target.value)}
+                  placeholder="e.g. living room tile, floor tile, 60x60 tile"
+                  className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
+                />
+              </div>
+
+              {aiConfidence != null && (
+                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
+                  <CheckCircle size={12} className="text-emerald-500" />
+                  Internal AI Confidence Score: <span className="font-semibold text-foreground">{(aiConfidence * 100).toFixed(0)}%</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {showPromptManager && (
+          <PromptTemplateManagerModal onClose={() => setShowPromptManager(false)} />
+        )}
 
         {/* Master Search Keywords */}
         <div>
@@ -599,208 +813,85 @@ function UploadTab({ onDone }: { onDone: () => void }) {
             onClick={() => openSystemImagePicker(setInitialFile, initRef.current)}
             className="block w-full text-center border-2 border-dashed rounded-lg p-5 cursor-pointer hover:bg-muted text-xs"
           >
-            {initialFile ? `Selected: ${initialFile.name}` : "Tap to Upload Initial Product Image"}
+            {initialFile ? `Selected: ${initialFile.name}` : "Choose Main Product Image"}
           </button>
           <input ref={initRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
             onChange={(e) => setInitialFile(e.target.files?.[0] ?? null)} />
-          {initialPreview && (
-            <img src={initialPreview} alt="initial preview" className="mt-2 w-full max-h-48 object-contain border rounded-md" />
-          )}
         </div>
 
         <div>
-          <p className="text-xs font-semibold mb-2">2. Finished/Lifestyle Installed Image (Optional)</p>
+          <p className="text-xs font-semibold mb-2">2. Finished / Installed Image (Optional)</p>
           <button
             type="button"
             onClick={() => openSystemImagePicker(setFinishedFile, finRef.current)}
             className="block w-full text-center border-2 border-dashed rounded-lg p-5 cursor-pointer hover:bg-muted text-xs"
           >
-            {finishedFile ? `Selected: ${finishedFile.name}` : "Tap to Upload Finished/Lifestyle Image"}
+            {finishedFile ? `Selected: ${finishedFile.name}` : "Choose Installed/Finished Image"}
           </button>
           <input ref={finRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
             onChange={(e) => setFinishedFile(e.target.files?.[0] ?? null)} />
-          {finishedPreview && (
-            <img src={finishedPreview} alt="finished preview" className="mt-2 w-full max-h-48 object-contain border rounded-md" />
-          )}
         </div>
       </div>
 
-      {/* Google SEO Live Preview */}
-      <div className="border rounded-xl p-4 bg-muted/40 space-y-2 text-left">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-          <Globe size={14} className="text-blue-500" /> Google Search Result Preview
-        </p>
-        <div className="font-sans">
-          <p className="text-xs text-[#202124] truncate">https://great-japhet.vercel.app › product › {slug}</p>
-          <h3 className="text-sm font-medium text-[#1a0dab] hover:underline truncate cursor-pointer">
-            {name ? `${name} | DE GREAT JAPHET` : "Product Name | DE GREAT JAPHET"}
-          </h3>
-          <p className="text-xs text-[#4d5156] line-clamp-2 mt-0.5">
-            {description || "Unified product description will automatically populate Google indexing, social Open Graph previews, and internal search."}
-          </p>
-        </div>
-      </div>
+      {status && <p className="text-xs text-center font-medium">{status}</p>}
 
       <button
         type="submit"
         disabled={busy}
-        className="w-full bg-primary text-primary-foreground rounded-lg py-2.5 disabled:opacity-50 font-medium text-sm"
+        className="w-full py-3 bg-gradient-gold text-[var(--cta-foreground)] font-semibold rounded-lg shadow-gold hover:opacity-90 transition disabled:opacity-50 text-sm"
       >
-        {busy ? "Uploading Product..." : "Save Product"}
+        {busy ? "Uploading Product..." : "Publish Product"}
       </button>
-      {status && <p className="text-xs font-medium text-center">{status}</p>}
     </form>
   );
 }
 
-/**
- * CUSTOMER COMMUNICATION OPERATING SYSTEM (BUILD I - SENDGRID INTEGRATED)
- */
 function CommunicationCenterTab({
   templates,
   logs,
   customers,
-  onReload,
+  onRefresh,
 }: {
   templates: EmailTemplate[];
   logs: EmailLog[];
   customers: Customer[];
-  onReload: () => void;
+  onRefresh: () => void;
 }) {
-  const [subTab, setSubTab] = useState<"dashboard" | "workflows" | "campaigns" | "templates" | "audience" | "history">("dashboard");
-  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
-  
-  // Send Test Email State (BUILD I)
-  const [testEmail, setTestEmail] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [testStatus, setTestStatus] = useState("");
-
-  // Manual Campaign State
-  const [campName, setCampName] = useState("");
-  const [campSubject, setCampSubject] = useState("");
-  const [campBanner, setCampBanner] = useState("");
-  const [campBody, setCampBody] = useState("");
-  const [campAudience, setCampAudience] = useState("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [recipientEmail, setRecipientEmail] = useState<string>("");
+  const [customSubject, setCustomSubject] = useState<string>("");
   const [sending, setSending] = useState(false);
-  const [statusMsg, setStatusMsg] = useState("");
+  const [sendResult, setSendResult] = useState<string>("");
 
-  const sentCount = logs.length;
-  const deliveredCount = logs.filter(l => l.status === "sent" || l.status === "delivered").length;
-  const failedCount = logs.filter(l => l.status === "failed").length;
-  const deliveryRate = sentCount > 0 ? Math.round((deliveredCount / sentCount) * 100) : 100;
+  const filteredLogs = logs.filter((l) => (filterType === "all" ? true : l.status === filterType));
 
-  const sendTestEmailAction = async (e: React.FormEvent) => {
+  const handleSendManual = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!testEmail.trim()) return alert("Test recipient email required.");
-    setTesting(true);
-    setTestStatus("Sending test email via SendGrid API...");
-
-    try {
-      const res = await CommunicationEngine.send({
-        templateKey: "welcome",
-        recipientEmail: testEmail.trim(),
-        variables: {
-          customer_name: testEmail.split("@")[0],
-        },
-        metadata: {
-          test_mode: true,
-          provider: "sendgrid",
-        },
-      });
-
-      if (res.success) {
-        setTestStatus(`✓ SendGrid Email Dispatched! Message ID: ${res.messageId || "sg-ok"}`);
-      } else {
-        setTestStatus(`❌ SendGrid Error: ${res.error || "Failed to dispatch"}`);
-      }
-      onReload();
-    } catch (err: any) {
-      setTestStatus("Error: " + err.message);
-    } finally {
-      setTesting(false);
+    if (!recipientEmail || !selectedTemplate) {
+      alert("Please choose a recipient email and a template.");
+      return;
     }
-  };
-
-  const saveTemplate = async (tpl: EmailTemplate) => {
-    const { error } = await supabase
-      .from("email_templates")
-      .update({
-        subject: tpl.subject,
-        body_html: tpl.body_html,
-        banner_url: tpl.banner_url || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", tpl.id);
-
-    if (error) {
-      alert("Failed to save template: " + error.message);
-    } else {
-      alert("✓ Template updated successfully! All future automatic SendGrid emails will use this updated content.");
-      setEditingTemplate(null);
-      onReload();
-    }
-  };
-
-  const dispatchManualCampaign = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!campSubject.trim()) return alert("Subject required.");
     setSending(true);
-    setStatusMsg("Dispatching campaign through SendGrid Communication Engine...");
-
+    setSendResult("");
     try {
-      let targetEmails = customers.map(c => c.email);
-      if (campAudience === "vip") {
-        targetEmails = customers.filter((_, idx) => idx % 2 === 0).map(c => c.email);
-      } else if (campAudience === "new") {
-        targetEmails = customers.slice(0, 10).map(c => c.email);
-      }
-
-      if (targetEmails.length === 0) targetEmails = ["customer@example.com"];
-
-      // Record Campaign
-      const { data: camp } = await supabase.from("email_campaigns").insert({
-        name: campName || campSubject,
-        template_key: "manual_campaign",
-        subject: campSubject,
-        banner_url: campBanner || null,
-        audience_filter: { audience: campAudience },
-        status: "sent",
-        sent_at: new Date().toISOString(),
-        sent_count: targetEmails.length,
-      }).select("id").single();
-
-      let successCount = 0;
-      let lastErr: string | undefined;
-
-      for (const email of targetEmails) {
-        const res = await CommunicationEngine.send({
-          templateKey: "manual_campaign",
-          recipientEmail: email,
-          campaignId: camp?.id,
-          variables: {
-            custom_subject: campSubject,
-            custom_heading: campName || campSubject,
-            custom_body: campBody || "Thank you for being a valued client of De Great Japhet.",
-          },
-          metadata: {
-            campaign_name: campName,
-            audience_filter: campAudience,
-            provider: "sendgrid",
-          },
-        });
-        if (res.success) successCount++;
-        else lastErr = res.error;
-      }
-
-      if (successCount > 0) {
-        setStatusMsg(`✓ Campaign dispatched via SendGrid to ${successCount} customers!`);
-      } else {
-        setStatusMsg(`❌ SendGrid Campaign Error: ${lastErr || "Failed to deliver"}`);
-      }
-      setCampName(""); setCampSubject(""); setCampBanner(""); setCampBody("");
-      onReload();
+      const res = await fetch("/api/communication/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workflow: selectedTemplate,
+          to: recipientEmail,
+          subject: customSubject || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Send failed");
+      setSendResult(`✓ Email queued/sent successfully! Message ID: ${data.messageId || "OK"}`);
+      setRecipientEmail("");
+      setCustomSubject("");
+      onRefresh();
     } catch (err: any) {
-      setStatusMsg("Error: " + err.message);
+      setSendResult(`Error: ${err.message}`);
     } finally {
       setSending(false);
     }
@@ -808,518 +899,133 @@ function CommunicationCenterTab({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between border-b pb-4">
+      <div className="border rounded-xl p-6 bg-card space-y-4">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Mail className="text-gold" size={24} /> Customer Communication Operating System (SendGrid Engine)
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Mail className="text-gold" size={20} /> Customer Communication Operating System
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Centralized SendGrid v3 email engine for welcome emails, collection reminders, campaigns & delivery tracking.
+            Centralized email delivery engine connected to SendGrid. Works across automated triggers and manual campaigns.
           </p>
         </div>
-      </div>
 
-      {/* Sub Nav */}
-      <div className="flex gap-2 border-b overflow-x-auto pb-2">
-        {[
-          { key: "dashboard", label: "Analytics Dashboard", icon: BarChart3 },
-          { key: "workflows", label: "Automatic Workflows", icon: CheckCircle },
-          { key: "templates", label: "Template Manager", icon: LayoutTemplate },
-          { key: "campaigns", label: "Send Campaign", icon: Send },
-          { key: "audience", label: "Audience Filters", icon: Filter },
-          { key: "history", label: "Delivery History", icon: HistoryIcon },
-        ].map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.key}
-              onClick={() => setSubTab(item.key as any)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg flex items-center gap-1.5 transition ${
-                subTab === item.key ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted text-muted-foreground"
-              }`}
+        <form onSubmit={handleSendManual} className="border rounded-lg p-4 bg-muted/20 space-y-4">
+          <h3 className="text-sm font-semibold flex items-center gap-1.5">
+            <Send size={15} className="text-gold" /> Send Manual / Test Campaign
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <select
+              value={selectedTemplate}
+              onChange={(e) => setSelectedTemplate(e.target.value)}
+              className="border rounded px-3 py-2 text-xs bg-background"
+              required
             >
-              <Icon size={14} /> {item.label}
+              <option value="">Select Workflow / Template *</option>
+              <option value="welcome">Welcome Email</option>
+              <option value="collection_reminder_24h">Collection Reminder (24h)</option>
+              <option value="abandoned_collection_72h">Abandoned Collection (72h)</option>
+              <option value="monthly_newsletter">Monthly Newsletter</option>
+              <option value="holiday_campaign">Holiday Campaign</option>
+              <option value="system_notification">System Notification</option>
+            </select>
+
+            <input
+              type="email"
+              placeholder="Recipient Email *"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              className="border rounded px-3 py-2 text-xs bg-background"
+              required
+            />
+
+            <input
+              type="text"
+              placeholder="Custom Subject (Optional)"
+              value={customSubject}
+              onChange={(e) => setCustomSubject(e.target.value)}
+              className="border rounded px-3 py-2 text-xs bg-background"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            {sendResult ? (
+              <p className={`text-xs font-medium ${sendResult.startsWith("✓") ? "text-emerald-500" : "text-red-500"}`}>
+                {sendResult}
+              </p>
+            ) : <span />}
+            <button
+              type="submit"
+              disabled={sending}
+              className="px-4 py-2 bg-gradient-gold text-[var(--cta-foreground)] font-semibold rounded text-xs disabled:opacity-50 shadow-gold"
+            >
+              {sending ? "Sending via SendGrid..." : "Send Email Now"}
             </button>
-          );
-        })}
+          </div>
+        </form>
       </div>
 
-      {/* 1. Dashboard Subtab */}
-      {subTab === "dashboard" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <StatCard label="Total Emails Sent" value={sentCount} />
-            <StatCard label="Delivery Rate" value={`${deliveryRate}%`} />
-            <StatCard label="SendGrid Integration" value="v3 Active" sub="SENDGRID_API_KEY" />
-            <StatCard label="Failed Emails" value={failedCount} />
-          </div>
-
-          {/* BUILD I: TEST EMAIL ACTION */}
-          <form onSubmit={sendTestEmailAction} className="border border-[oklch(0.82_0.14_86/0.4)] rounded-xl p-6 bg-card space-y-3 shadow-gold">
-            <h3 className="text-sm font-bold flex items-center gap-2 text-gold">
-              <Zap size={16} /> Send Test Email (SendGrid Readiness Verification)
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Enter any email address below to send an instant test message through SendGrid using verified sender <strong>greatjaphethenterprises@gmail.com</strong>.
-            </p>
-            <div className="flex gap-2 max-w-xl">
-              <input
-                type="email"
-                placeholder="Enter test recipient email (e.g. yourname@gmail.com)"
-                value={testEmail}
-                onChange={(e) => setTestEmail(e.target.value)}
-                className="flex-1 border rounded-lg px-3 py-2 text-sm bg-background"
-                required
-              />
+      <div className="border rounded-xl p-6 bg-card space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <HistoryIcon size={16} className="text-gold" /> Communication Delivery Logs
+          </h3>
+          <div className="flex gap-2">
+            {(["all", "sent", "failed", "pending"] as const).map((s) => (
               <button
-                type="submit"
-                disabled={testing}
-                className="btn-gold px-4 py-2 text-xs font-semibold shrink-0 disabled:opacity-50"
+                key={s}
+                onClick={() => setFilterType(s)}
+                className={`px-3 py-1 rounded text-xs capitalize border ${
+                  filterType === s ? "bg-gold/20 text-gold border-gold" : "border-border text-muted-foreground"
+                }`}
               >
-                {testing ? "Dispatching..." : "Send Test Email"}
+                {s}
               </button>
-            </div>
-            {testStatus && <p className="text-xs font-medium mt-2">{testStatus}</p>}
-          </form>
-
-          <div className="border rounded-xl p-6 bg-card space-y-3">
-            <h3 className="text-sm font-semibold">SendGrid Communication Engine Status</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-3 border rounded-lg bg-muted/30">
-                <span className="font-semibold text-foreground">Welcome Email Workflow:</span>
-                <span className="text-green-500 font-bold ml-2">● SendGrid Connected (Signup Trigger)</span>
-              </div>
-              <div className="p-3 border rounded-lg bg-muted/30">
-                <span className="font-semibold text-foreground">Collection Reminder Workflow:</span>
-                <span className="text-green-500 font-bold ml-2">● SendGrid Connected (24h Delay)</span>
-              </div>
-              <div className="p-3 border rounded-lg bg-muted/30">
-                <span className="font-semibold text-foreground">Abandoned Collection Reminder:</span>
-                <span className="text-green-500 font-bold ml-2">● SendGrid Connected (72h Delay)</span>
-              </div>
-              <div className="p-3 border rounded-lg bg-muted/30">
-                <span className="font-semibold text-foreground">Newsletter & Campaign Engine:</span>
-                <span className="text-green-500 font-bold ml-2">● SendGrid Connected</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Automatic Workflows */}
-      {subTab === "workflows" && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Pre-Configured Automatic Workflows (SendGrid Powered)</h3>
-          <p className="text-xs text-muted-foreground">
-            All automatic emails pull content directly from the Template Manager below. No email content is hardcoded.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border rounded-xl p-4 bg-card space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">Welcome Email</h4>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">SENDGRID ACTIVE</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Trigger: New Customer Account Registration (Sent Immediately via SendGrid)</p>
-              <p className="text-xs font-mono bg-muted p-2 rounded">Template: welcome</p>
-            </div>
-
-            <div className="border rounded-xl p-4 bg-card space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">Collection Reminder</h4>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">SENDGRID ACTIVE</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Trigger: Saved Collection without order submission (Delay: 24h)</p>
-              <p className="text-xs font-mono bg-muted p-2 rounded">Template: collection_reminder</p>
-            </div>
-
-            <div className="border rounded-xl p-4 bg-card space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">Abandoned Collection Reminder</h4>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">SENDGRID ACTIVE</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Trigger: Inactive Saved Collection (Delay: 72h)</p>
-              <p className="text-xs font-mono bg-muted p-2 rounded">Template: abandoned_collection</p>
-            </div>
-
-            <div className="border rounded-xl p-4 bg-card space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-sm">Monthly Newsletter Showcase</h4>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-green-500/10 text-green-500 font-bold">SENDGRID ACTIVE</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Trigger: Monthly Cron Schedule</p>
-              <p className="text-xs font-mono bg-muted p-2 rounded">Template: monthly_newsletter</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Templates Subtab */}
-      {subTab === "templates" && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Centralized Template Manager</h3>
-          <p className="text-xs text-muted-foreground">
-            Edit the pre-saved email templates below. All changes immediately take effect across all automatic workflows.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {templates.map((tpl) => (
-              <div key={tpl.id} className="border rounded-xl p-4 bg-card space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-sm text-gold">{tpl.name}</h4>
-                  <span className="text-[10px] font-mono bg-muted px-2 py-0.5 rounded">{tpl.key}</span>
-                </div>
-                <p className="text-xs font-medium text-foreground">Subject: {tpl.subject}</p>
-                <div className="bg-muted/40 p-3 rounded-lg text-xs max-h-24 overflow-hidden border">
-                  <div dangerouslySetInnerHTML={{ __html: tpl.body_html }} />
-                </div>
-                {tpl.variables && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Available Variables: {tpl.variables.map(v => `{{${v}}}`).join(", ")}
-                  </p>
-                )}
-                <button
-                  onClick={() => setEditingTemplate(tpl)}
-                  className="w-full btn-outline-gold py-1.5 text-xs font-semibold"
-                >
-                  Edit Template
-                </button>
-              </div>
             ))}
           </div>
         </div>
-      )}
 
-      {/* 4. Campaigns Subtab */}
-      {subTab === "campaigns" && (
-        <form onSubmit={dispatchManualCampaign} className="max-w-2xl border rounded-xl p-6 bg-card space-y-4">
-          <h3 className="font-bold text-base flex items-center gap-2">
-            <Send className="text-gold" size={18} /> Launch Communication Campaign (SendGrid)
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            Dispatch manual campaigns, holiday offers, or system maintenance notices to targeted customer segments via SendGrid v3 API.
-          </p>
-
-          <input
-            type="text"
-            placeholder="Campaign Name (e.g. Easter Special / System Maintenance Notice)"
-            value={campName}
-            onChange={(e) => setCampName(e.target.value)}
-            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-            required
-          />
-
-          <input
-            type="text"
-            placeholder="Email Subject Line *"
-            value={campSubject}
-            onChange={(e) => setCampSubject(e.target.value)}
-            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-            required
-          />
-
-          <select
-            value={campAudience}
-            onChange={(e) => setCampAudience(e.target.value)}
-            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-          >
-            <option value="all">All Registered Customers ({customers.length})</option>
-            <option value="vip">VIP / Returning Customers</option>
-            <option value="new">Recently Joined (Last 30 Days)</option>
-          </select>
-
-          <textarea
-            placeholder="Campaign Body Content..."
-            value={campBody}
-            onChange={(e) => setCampBody(e.target.value)}
-            rows={5}
-            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-          />
-
-          <button
-            type="submit"
-            disabled={sending}
-            className="btn-gold w-full py-2.5 font-semibold text-sm disabled:opacity-50"
-          >
-            {sending ? "Dispatching via SendGrid..." : "Send Campaign Now"}
-          </button>
-
-          {statusMsg && <p className="text-xs font-medium text-center mt-2">{statusMsg}</p>}
-        </form>
-      )}
-
-      {/* 5. Audience Filters Subtab */}
-      {subTab === "audience" && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Audience Segmentation Engine</h3>
-          <div className="border rounded-xl p-4 bg-card space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <div className="p-3 border rounded-lg bg-muted/20">
-                <p className="font-bold text-sm text-gold">All Customers</p>
-                <p className="text-muted-foreground mt-1">{customers.length} total registered profiles</p>
-              </div>
-              <div className="p-3 border rounded-lg bg-muted/20">
-                <p className="font-bold text-sm text-gold">Returning VIP</p>
-                <p className="text-muted-foreground mt-1">Customers with 2+ inquiries</p>
-              </div>
-              <div className="p-3 border rounded-lg bg-muted/20">
-                <p className="font-bold text-sm text-gold">Never Contacted</p>
-                <p className="text-muted-foreground mt-1">Pending first engagement</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 6. Delivery History Subtab */}
-      {subTab === "history" && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Real-Time SendGrid Delivery History</h3>
-          <div className="border rounded-xl overflow-x-auto bg-card">
-            <table className="w-full text-xs min-w-[750px]">
-              <thead className="bg-muted">
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full text-xs text-left">
+            <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
+              <tr>
+                <th className="p-3">Timestamp</th>
+                <th className="p-3">Campaign / Workflow</th>
+                <th className="p-3">Recipient</th>
+                <th className="p-3">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {filteredLogs.length === 0 ? (
                 <tr>
-                  <th className="text-left p-3">Recipient</th>
-                  <th className="text-left p-3">Provider</th>
-                  <th className="text-left p-3">Template</th>
-                  <th className="text-left p-3">Subject</th>
-                  <th className="text-left p-3">Status / Error</th>
-                  <th className="text-left p-3">Sent At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-6 text-center text-muted-foreground">No email delivery logs recorded yet.</td>
-                  </tr>
-                ) : (
-                  logs.map((l) => (
-                    <tr key={l.id} className="border-t">
-                      <td className="p-3 font-medium">{l.recipient_email}</td>
-                      <td className="p-3 font-mono text-[11px] text-gold">{l.metadata?.provider || "sendgrid"}</td>
-                      <td className="p-3 font-mono text-[11px]">{l.template_key}</td>
-                      <td className="p-3 truncate max-w-[200px]">{l.subject}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          l.status === "sent" || l.status === "delivered" ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-                        }`}>
-                          {l.status.toUpperCase()}
-                        </span>
-                        {l.error_message && (
-                          <p className="text-[10px] text-red-400 truncate max-w-[150px] mt-0.5" title={l.error_message}>
-                            {l.error_message}
-                          </p>
-                        )}
-                      </td>
-                      <td className="p-3 text-muted-foreground">{new Date(l.created_at).toLocaleString()}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Template Edit Modal */}
-      {editingTemplate && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-background w-full max-w-2xl rounded-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto border shadow-gold">
-            <h3 className="text-lg font-bold text-gold">Edit Template: {editingTemplate.name}</h3>
-            
-            <div>
-              <label className="block text-xs font-semibold mb-1">Email Subject Line</label>
-              <input
-                type="text"
-                value={editingTemplate.subject}
-                onChange={(e) => setEditingTemplate({ ...editingTemplate, subject: e.target.value })}
-                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold mb-1">HTML Body Content</label>
-              <textarea
-                rows={10}
-                value={editingTemplate.body_html}
-                onChange={(e) => setEditingTemplate({ ...editingTemplate, body_html: e.target.value })}
-                className="w-full border rounded-md px-3 py-2 text-xs font-mono bg-background"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditingTemplate(null)}
-                className="flex-1 border rounded-lg py-2 text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => saveTemplate(editingTemplate)}
-                className="flex-1 btn-gold py-2 text-sm font-semibold"
-              >
-                Save Template Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CustomersTab({ customers, logs }: { customers: Customer[]; logs: ActivityLog[] }) {
-  if (customers.length === 0) return <p className="text-muted-foreground text-sm">No customers yet.</p>;
-  const requestsByEmail = new Map<string, number>();
-  logs.forEach((l) => {
-    if (!l.user_email) return;
-    if ((l.action || "").toLowerCase().includes("whatsapp")) {
-      requestsByEmail.set(l.user_email, (requestsByEmail.get(l.user_email) || 0) + 1);
-    }
-  });
-  const lastByEmail = new Map<string, string>();
-  logs.forEach((l) => {
-    if (!l.user_email) return;
-    if (!lastByEmail.has(l.user_email)) lastByEmail.set(l.user_email, l.created_at);
-  });
-
-  return (
-    <div className="border rounded-lg overflow-x-auto">
-      <table className="w-full text-sm min-w-[720px]">
-        <thead className="bg-muted">
-          <tr>
-            <th className="text-left p-3">Name</th>
-            <th className="text-left p-3">Email</th>
-            <th className="text-left p-3">Phone</th>
-            <th className="text-left p-3">Provider</th>
-            <th className="text-left p-3">Joined</th>
-            <th className="text-left p-3">Last Activity</th>
-            <th className="text-left p-3">Requests</th>
-          </tr>
-        </thead>
-        <tbody>
-          {customers.map((c) => (
-            <tr key={c.id} className="border-t">
-              <td className="p-3">{c.full_name || "—"}</td>
-              <td className="p-3">{c.email}</td>
-              <td className="p-3">{c.phone || "—"}</td>
-              <td className="p-3 capitalize">{c.provider || "email"}</td>
-              <td className="p-3">{new Date(c.created_at).toLocaleString()}</td>
-              <td className="p-3">{lastByEmail.get(c.email) ? new Date(lastByEmail.get(c.email)!).toLocaleString() : (c.last_login_at ? new Date(c.last_login_at).toLocaleString() : "—")}</td>
-              <td className="p-3">{requestsByEmail.get(c.email) || 0}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-const ROLE_OPTIONS = ["customer", "staff", "super_admin"] as const;
-
-function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customers: Customer[]; onChanged: () => void }) {
-  const rolesByUser = new Map<string, UserRole[]>();
-  roles.forEach((r) => {
-    const arr = rolesByUser.get(r.user_id) || [];
-    arr.push(r);
-    rolesByUser.set(r.user_id, arr);
-  });
-  const customerByUserId = new Map(customers.filter((c) => c.user_id).map((c) => [c.user_id!, c]));
-
-  const userIds = new Set<string>();
-  customers.forEach((c) => c.user_id && userIds.add(c.user_id));
-  roles.forEach((r) => userIds.add(r.user_id));
-
-  const setRole = async (user_id: string, email: string | null, newRole: string) => {
-    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", user_id);
-    if (delErr) { alert("Failed: " + delErr.message); return; }
-    const { error: insErr } = await supabase.from("user_roles").insert({ user_id, email, role: newRole as any });
-    if (insErr) { alert("Failed: " + insErr.message); return; }
-    onChanged();
-  };
-
-  if (userIds.size === 0) return <p className="text-muted-foreground text-sm">No users yet.</p>;
-
-  return (
-    <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Promote any registered user to <span className="font-medium">staff</span> or <span className="font-medium">super_admin</span> to grant admin dashboard access.
-      </p>
-      <div className="border rounded-lg overflow-x-auto">
-        <table className="w-full text-sm min-w-[720px]">
-          <thead className="bg-muted">
-            <tr>
-              <th className="text-left p-3">Name</th>
-              <th className="text-left p-3">Email</th>
-              <th className="text-left p-3">Phone</th>
-              <th className="text-left p-3">Current Role</th>
-              <th className="text-left p-3">Change Role</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from(userIds).map((uid) => {
-              const c = customerByUserId.get(uid);
-              const userRoles = rolesByUser.get(uid) || [];
-              const currentRole = userRoles[0]?.role || "customer";
-              const email = c?.email || userRoles[0]?.email || null;
-              return (
-                <tr key={uid} className="border-t">
-                  <td className="p-3">{c?.full_name || "—"}</td>
-                  <td className="p-3">{email || "—"}</td>
-                  <td className="p-3">{c?.phone || "—"}</td>
-                  <td className="p-3 capitalize">{currentRole}</td>
-                  <td className="p-3">
-                    <select
-                      value={currentRole}
-                      onChange={(e) => setRole(uid, email, e.target.value)}
-                      className="border rounded px-2 py-1 bg-background text-sm"
-                    >
-                      {ROLE_OPTIONS.map((r) => (
-                        <option key={r} value={r}>{r}</option>
-                      ))}
-                    </select>
+                  <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                    No communication logs found for filter '{filterType}'.
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsTab({ logs }: { logs: ActivityLog[] }) {
-  const whatsappOrders = logs.filter((l) =>
-    (l.action || "").toLowerCase().includes("whatsapp"),
-  ).length;
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <StatCard label="WhatsApp Orders (recent)" value={whatsappOrders} />
-        <StatCard label="Recent Activity" value={logs.length} />
-      </div>
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted">
-            <tr>
-              <th className="text-left p-3">Email</th>
-              <th className="text-left p-3">Action</th>
-              <th className="text-left p-3">Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((l) => (
-              <tr key={l.id} className="border-t">
-                <td className="p-3">{l.user_email || "—"}</td>
-                <td className="p-3">{l.action}</td>
-                <td className="p-3">{new Date(l.created_at).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              ) : (
+                filteredLogs.slice(0, 30).map((l) => (
+                  <tr key={l.id} className="hover:bg-muted/20">
+                    <td className="p-3 text-muted-foreground">{new Date(l.created_at).toLocaleString()}</td>
+                    <td className="p-3 font-medium text-foreground">{l.campaign_id}</td>
+                    <td className="p-3 text-muted-foreground">{l.email}</td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          l.status === "sent" || l.status === "delivered"
+                            ? "bg-emerald-500/20 text-emerald-400"
+                            : l.status === "failed"
+                            ? "bg-red-500/20 text-red-400"
+                            : "bg-amber-500/20 text-amber-400"
+                        }`}
+                      >
+                        {l.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -1334,16 +1040,16 @@ function EditProductModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [name, setName] = useState(product.product_name);
+  const [name, setName] = useState(product.product_name || "");
   const [category, setCategory] = useState(product.category || "");
   const [family, setFamily] = useState(product.family || "");
-  const [price, setPrice] = useState(product.price?.toString() || "");
+  const [price, setPrice] = useState(product.price ? String(product.price) : "");
   const [currency, setCurrency] = useState(product.currency || "NGN");
   const [description, setDescription] = useState(product.full_details || "");
   const [searchKeywords, setSearchKeywords] = useState(product.search_keywords || "");
   const [searchTags, setSearchTags] = useState(product.search_tags || "");
-  const [imageUrl, setImageUrl] = useState(product.product_image || "");
   const [file, setFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState(product.product_image || "");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const editFileRef = useRef<HTMLInputElement>(null);
@@ -1351,11 +1057,11 @@ function EditProductModal({
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    setStatus("Saving...");
+    setStatus("Saving changes...");
     try {
       let url = imageUrl;
       if (file) {
-        setStatus("Uploading image...");
+        setStatus("Uploading new image...");
         url = await uploadImage(file);
       }
       const { error } = await supabase
@@ -1372,11 +1078,13 @@ function EditProductModal({
           search_tags: searchTags.trim() || null,
         })
         .eq("id", product.id);
+
       if (error) throw error;
       onSaved();
     } catch (err: any) {
       console.error(err);
-      setStatus("Error: " + err.message);
+      setStatus("Error: " + (err.message || "Failed to update product"));
+    } finally {
       setBusy(false);
     }
   };
@@ -1456,107 +1164,227 @@ function EditProductModal({
 }
 
 function OrdersTab({ orders }: { orders: Order[] }) {
-  const [q, setQ] = useState("");
-  const [downloading, setDownloading] = useState<string | null>(null);
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Orders & Enquiries</h2>
+      <div className="border rounded-xl overflow-hidden bg-card">
+        <table className="w-full text-xs text-left">
+          <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
+            <tr>
+              <th className="p-3">Order Code</th>
+              <th className="p-3">Customer</th>
+              <th className="p-3">Phone</th>
+              <th className="p-3">Items Count</th>
+              <th className="p-3">Estimate</th>
+              <th className="p-3">Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/40">
+            {orders.length === 0 ? (
+              <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No orders found</td></tr>
+            ) : (
+              orders.map((o) => (
+                <tr key={o.id} className="hover:bg-muted/20">
+                  <td className="p-3 font-semibold text-gold">{o.order_code}</td>
+                  <td className="p-3 text-foreground">{o.customer_name || o.customer_email || "Anonymous"}</td>
+                  <td className="p-3 text-muted-foreground">{o.customer_phone || "—"}</td>
+                  <td className="p-3">{o.item_count} items</td>
+                  <td className="p-3 font-medium">₦{Number(o.total_estimate || 0).toLocaleString()}</td>
+                  <td className="p-3 text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
-  const filtered = orders.filter((o) => {
-    if (!q.trim()) return true;
-    const s = q.trim().toLowerCase();
-    return (
-      o.order_code.toLowerCase().includes(s) ||
-      (o.customer_email || "").toLowerCase().includes(s) ||
-      (o.customer_name || "").toLowerCase().includes(s) ||
-      (o.customer_phone || "").toLowerCase().includes(s)
-    );
-  });
+function CustomersTab({ customers, logs }: { customers: Customer[]; logs: ActivityLog[] }) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">Registered Customers</h2>
+      <div className="border rounded-xl overflow-hidden bg-card">
+        <table className="w-full text-xs text-left">
+          <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
+            <tr>
+              <th className="p-3">Full Name</th>
+              <th className="p-3">Email</th>
+              <th className="p-3">Phone</th>
+              <th className="p-3">Provider</th>
+              <th className="p-3">Joined Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/40">
+            {customers.map((c) => (
+              <tr key={c.id} className="hover:bg-muted/20">
+                <td className="p-3 font-medium text-foreground">{c.full_name || "—"}</td>
+                <td className="p-3 text-muted-foreground">{c.email}</td>
+                <td className="p-3 text-muted-foreground">{c.phone || "—"}</td>
+                <td className="p-3 capitalize">{c.provider || "email"}</td>
+                <td className="p-3 text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
-  const downloadPdf = async (order: Order) => {
-    if (!order.pdf_path) { alert("No PDF on file for this order."); return; }
-    setDownloading(order.id);
+function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customers: Customer[]; onChanged: () => void }) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">User Role Management</h2>
+      <div className="border rounded-xl overflow-hidden bg-card">
+        <table className="w-full text-xs text-left">
+          <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
+            <tr>
+              <th className="p-3">User ID</th>
+              <th className="p-3">Email</th>
+              <th className="p-3">Assigned Role</th>
+              <th className="p-3">Created At</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/40">
+            {roles.map((r) => (
+              <tr key={r.id} className="hover:bg-muted/20">
+                <td className="p-3 text-muted-foreground font-mono text-[10px]">{r.user_id}</td>
+                <td className="p-3 font-medium text-foreground">{r.email || "—"}</td>
+                <td className="p-3 font-semibold text-gold uppercase">{r.role}</td>
+                <td className="p-3 text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsTab({ logs }: { logs: ActivityLog[] }) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold">System Analytics & Logs</h2>
+      <div className="border rounded-xl overflow-hidden bg-card">
+        <table className="w-full text-xs text-left">
+          <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
+            <tr>
+              <th className="p-3">Timestamp</th>
+              <th className="p-3">Action</th>
+              <th className="p-3">User</th>
+              <th className="p-3">Details</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/40">
+            {logs.map((l) => (
+              <tr key={l.id} className="hover:bg-muted/20">
+                <td className="p-3 text-muted-foreground">{new Date(l.created_at).toLocaleString()}</td>
+                <td className="p-3 font-medium text-foreground">{l.action}</td>
+                <td className="p-3 text-muted-foreground">{l.user_email || "System"}</td>
+                <td className="p-3 font-mono text-[10px] max-w-xs truncate">{JSON.stringify(l.details)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PromptTemplateManagerModal({ onClose }: { onClose: () => void }) {
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [userPromptTemplate, setUserPromptTemplate] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    supabase
+      .from("ai_prompt_templates")
+      .select("system_prompt, user_prompt_template")
+      .eq("template_name", "Product Intelligence")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setSystemPrompt(data.system_prompt || "");
+          setUserPromptTemplate(data.user_prompt_template || "");
+        }
+        setLoading(false);
+      });
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    setMsg("");
     try {
-      const { data, error } = await supabase.storage
-        .from("order-pdfs")
-        .createSignedUrl(order.pdf_path, 60 * 5);
-      if (error || !data?.signedUrl) throw error || new Error("No URL");
-      window.open(data.signedUrl, "_blank");
+      const { error } = await supabase
+        .from("ai_prompt_templates")
+        .upsert({
+          template_name: "Product Intelligence",
+          template_type: "product_intelligence",
+          system_prompt: systemPrompt,
+          user_prompt_template: userPromptTemplate,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "template_name" });
+
+      if (error) throw error;
+      setMsg("✓ Prompt Template updated successfully!");
+      setTimeout(() => onClose(), 1200);
     } catch (e: any) {
-      alert("Could not load PDF: " + (e.message || "error"));
+      setMsg("Error: " + (e.message || "Failed to update prompt template"));
     } finally {
-      setDownloading(null);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          placeholder="Search by order code (DGJ-XXXXX), email, name, phone…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="flex-1 min-w-[220px] border rounded px-3 py-2 text-sm bg-background"
-        />
-        <span className="text-xs text-muted-foreground">{filtered.length} of {orders.length} orders</span>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+      <div className="bg-background w-full max-w-2xl rounded-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Sparkles className="text-gold" size={18} /> Product Intelligence Prompt Manager
+        </h2>
+        <p className="text-xs text-muted-foreground">
+          Edit the authoritative prompt template used by the Product Intelligence Engine. Changes immediately take effect for future product generations without code changes.
+        </p>
+
+        {loading ? (
+          <p className="text-xs text-muted-foreground py-4 text-center">Loading prompt template...</p>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold mb-1">System Persona Prompt</label>
+              <textarea
+                rows={3}
+                className="w-full border rounded px-3 py-2 text-xs bg-background"
+                value={systemPrompt}
+                onChange={e => setSystemPrompt(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1">User Template Prompt</label>
+              <textarea
+                rows={10}
+                className="w-full border rounded px-3 py-2 text-xs bg-background font-mono"
+                value={userPromptTemplate}
+                onChange={e => setUserPromptTemplate(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Available placeholders: {"{{product_name}}, {{category}}, {{family}}, {{brand}}, {{price}}, {{currency}}, {{description}}, {{manual_specs}}"}</p>
+            </div>
+
+            {msg && <p className="text-xs text-center font-medium">{msg}</p>}
+
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={onClose} className="flex-1 border rounded py-2 text-xs">Cancel</button>
+              <button type="button" onClick={save} disabled={saving} className="flex-1 bg-gradient-gold text-[var(--cta-foreground)] font-semibold rounded py-2 text-xs disabled:opacity-50">
+                {saving ? "Saving..." : "Save Prompt Template"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No orders found.</p>
-      ) : (
-        <ul className="space-y-3">
-          {filtered.map((o) => (
-            <li key={o.id} className="border rounded-lg p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Order Code</p>
-                  <p className="font-mono font-bold text-base">{o.order_code}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(o.created_at).toLocaleString()} · {o.item_count} item{o.item_count !== 1 ? "s" : ""}
-                    {o.total_estimate ? ` · ₦${Number(o.total_estimate).toLocaleString()}` : ""}
-                  </p>
-                </div>
-                <div className="text-right text-xs">
-                  <p className="font-medium">{o.customer_name || "—"}</p>
-                  <p className="text-muted-foreground">{o.customer_email || "—"}</p>
-                  <p className="text-muted-foreground">{o.customer_phone || "—"}</p>
-                </div>
-              </div>
-
-              <ul className="mt-3 space-y-2">
-                {(o.items || []).map((it: any, i: number) => (
-                  <li key={i} className="flex gap-3 items-start border-t pt-2 first:border-t-0 first:pt-0">
-                    <div className="w-14 h-14 rounded bg-muted overflow-hidden border shrink-0">
-                      {it.product_image ? (
-                        <img src={it.product_image} alt={it.product_name} className="w-full h-full object-cover" />
-                      ) : null}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{it.product_name}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {it.category}{it.item_code ? ` · ${it.item_code}` : ""} · Qty {it.qty}
-                      </p>
-                      {it.note && (
-                        <p className="mt-1 text-xs italic border-l-2 border-primary/50 pl-2 text-foreground/80">
-                          {it.note}
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => downloadPdf(o)}
-                  disabled={!o.pdf_path || downloading === o.id}
-                  className="px-3 py-1.5 text-sm border rounded hover:bg-muted disabled:opacity-50"
-                >
-                  {downloading === o.id ? "Loading…" : o.pdf_path ? "View PDF Invoice" : "No PDF"}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }
