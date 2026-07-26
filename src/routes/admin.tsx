@@ -1,10 +1,9 @@
-// Production Build Trigger: Admin User Role Editing & Customer Communication Suite
 import { generateProductIntelligence } from "@/lib/productIntelligence";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES } from "@/lib/categories";
-import { Search, Globe, Tag, Sparkles, Mail, Send, Filter, History as HistoryIcon, LayoutTemplate, BarChart3, CheckCircle, Clock, Zap, UserCheck, Shield, Upload, Image as ImageIcon, Edit, Eye, Save } from "lucide-react";
+import { Search, Globe, Tag, Sparkles, Mail, Send, Filter, History as HistoryIcon, LayoutTemplate, BarChart3, CheckCircle, Clock, Zap, UserCheck, Shield, Upload, Image as ImageIcon, Edit, Eye, Save, Trash2, RefreshCw, Users, Layers, UserPlus } from "lucide-react";
 import { CommunicationEngine, EmailTemplate, EmailLog, DEFAULT_TEMPLATES, TemplateKey } from "@/lib/communicationEngine";
 
 export const Route = createFileRoute("/admin")({
@@ -259,7 +258,7 @@ function AdminDashboard() {
                 tab === t ? "border-primary font-medium text-gold" : "border-transparent text-muted-foreground"
               }`}
             >
-              {t === "communication" ? "Customer Communication" : t}
+              {t === "communication" ? "Customer Communication" : t === "users" ? "User Management" : t}
             </button>
           ))}
         </nav>
@@ -285,6 +284,8 @@ function AdminDashboard() {
             templates={emailTemplates}
             logs={emailLogs}
             customers={customers}
+            roles={roles}
+            orders={orders}
             onRefresh={loadEmailData}
           />
         )}
@@ -724,22 +725,28 @@ function CommunicationCenterTab({
   templates,
   logs,
   customers,
+  roles,
+  orders,
   onRefresh,
 }: {
   templates: EmailTemplate[];
   logs: EmailLog[];
   customers: Customer[];
+  roles: UserRole[];
+  orders: Order[];
   onRefresh: () => void;
 }) {
   const [commSubTab, setCommSubTab] = useState<"manual" | "templates" | "logs">("manual");
   
-  // Manual Email state
-  const [manualTemplateKey, setManualTemplateKey] = useState<TemplateKey>("manual_campaign");
+  // Manual Email state & Audience Filter
+  const [audienceFilter, setAudienceFilter] = useState<"all" | "customers" | "admins" | "super_admins" | "recently_joined" | "collection_owners" | "custom">("all");
   const [manualRecipient, setManualRecipient] = useState<string>("");
-  const [manualSubject, setManualSubject] = useState<string>("");
-  const [manualBody, setManualBody] = useState<string>("");
+  const [manualSubject, setManualSubject] = useState<string>("Direct Announcement — DE GREAT JAPHET");
+  const [manualBody, setManualBody] = useState<string>("Thank you for choosing DE GREAT JAPHET for your architectural finishing project.");
+  const [manualButtonText, setManualButtonText] = useState<string>("Browse Luxury Showroom");
+  const [manualButtonUrl, setManualButtonUrl] = useState<string>("/showroom");
   const [manualPhotoFile, setManualPhotoFile] = useState<File | null>(null);
-  const [manualPhotoUrl, setManualPhotoUrl] = useState<string>("");
+  const [manualPhotoUrl, setManualPhotoUrl] = useState<string>("/assets/email_welcome_banner.jpg");
   const [sendingManual, setSendingManual] = useState(false);
   const [manualSendResult, setManualSendResult] = useState<string>("");
   const manualFileRef = useRef<HTMLInputElement>(null);
@@ -747,7 +754,11 @@ function CommunicationCenterTab({
   // Template Editor state
   const [selectedTplKey, setSelectedTplKey] = useState<TemplateKey>("welcome");
   const [tplSubject, setTplSubject] = useState("");
+  const [tplTitle, setTplTitle] = useState("");
   const [tplBodyHtml, setTplBodyHtml] = useState("");
+  const [tplButtonText, setTplButtonText] = useState("");
+  const [tplButtonLink, setTplButtonLink] = useState("");
+  const [tplFooterText, setTplFooterText] = useState("");
   const [tplBannerUrl, setTplBannerUrl] = useState("");
   const [tplBannerFile, setTplBannerFile] = useState<File | null>(null);
   const [savingTpl, setSavingTpl] = useState(false);
@@ -762,10 +773,49 @@ function CommunicationCenterTab({
   useEffect(() => {
     if (currentTemplate) {
       setTplSubject(currentTemplate.subject || "");
+      setTplTitle(currentTemplate.title || currentTemplate.name);
       setTplBodyHtml(currentTemplate.body_html || "");
+      setTplButtonText(currentTemplate.button_text || "Explore Showroom Catalog");
+      setTplButtonLink(currentTemplate.button_link || "/showroom");
+      setTplFooterText(currentTemplate.footer_text || "DE GREAT JAPHET • Quality & Luxury Architectural Finishing");
       setTplBannerUrl(currentTemplate.banner_url || "/assets/email_welcome_banner.jpg");
     }
   }, [selectedTplKey, templates]);
+
+  // Compute recipients based on Audience Filter
+  const getAudienceRecipients = (): string[] => {
+    if (audienceFilter === "custom") {
+      return manualRecipient ? [manualRecipient] : [];
+    }
+    if (audienceFilter === "all") {
+      const emails = new Set<string>();
+      customers.forEach(c => c.email && emails.add(c.email));
+      roles.forEach(r => r.email && emails.add(r.email));
+      return Array.from(emails);
+    }
+    if (audienceFilter === "customers") {
+      return customers.map(c => c.email).filter(Boolean);
+    }
+    if (audienceFilter === "admins") {
+      const adminUserIds = new Set(roles.filter(r => r.role === "admin" || r.role === "super_admin").map(r => r.user_id));
+      return customers.filter(c => adminUserIds.has(c.user_id || c.id) || roles.some(r => r.email === c.email && r.role === "admin")).map(c => c.email);
+    }
+    if (audienceFilter === "super_admins") {
+      const superAdminUserIds = new Set(roles.filter(r => r.role === "super_admin").map(r => r.user_id));
+      return customers.filter(c => superAdminUserIds.has(c.user_id || c.id) || roles.some(r => r.email === c.email && r.role === "super_admin")).map(c => c.email);
+    }
+    if (audienceFilter === "recently_joined") {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      return customers.filter(c => new Date(c.created_at) >= thirtyDaysAgo).map(c => c.email);
+    }
+    if (audienceFilter === "collection_owners") {
+      const orderEmails = new Set(orders.map(o => o.customer_email).filter(Boolean));
+      return Array.from(orderEmails) as string[];
+    }
+    return [];
+  };
+
+  const targetRecipients = getAudienceRecipients();
 
   const handleAttachPhoto = async (file: File | null) => {
     if (!file) return;
@@ -780,43 +830,43 @@ function CommunicationCenterTab({
 
   const handleSendManualEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualRecipient) {
-      alert("Please enter or select a recipient email.");
+    if (targetRecipients.length === 0) {
+      alert("No valid recipient emails found for the selected audience filter.");
       return;
     }
     setSendingManual(true);
     setManualSendResult("");
     try {
-      let finalHtml = manualBody || `<p style="font-family: Arial, sans-serif; line-height: 1.6; color: #f5f5f5;">Hello,</p><p style="font-family: Arial, sans-serif; line-height: 1.6; color: #cccccc;">Thank you for contacting DE GREAT JAPHET. We are pleased to provide your requested architectural finishing quote.</p>`;
+      let sentCount = 0;
+      let failCount = 0;
 
-      if (manualPhotoUrl) {
-        finalHtml = `<div style="max-width:600px; margin:0 auto; background:#111; color:#fff; padding:20px; border-radius:12px;"><img src="${manualPhotoUrl}" alt="Attachment Photo" style="width:100%; max-height:300px; object-fit:cover; border-radius:8px; margin-bottom:16px; display:block;" />${finalHtml}</div>`;
-      } else {
-        finalHtml = `<div style="max-width:600px; margin:0 auto; background:#111; color:#fff; padding:20px; border-radius:12px;">${finalHtml}</div>`;
-      }
-
-      const res = await CommunicationEngine.send({
-        templateKey: manualTemplateKey,
-        recipientEmail: manualRecipient,
-        metadata: {
-          customSubject: manualSubject || "Direct Communication from DE GREAT JAPHET",
-          customBodyHtml: finalHtml,
-        },
+      const renderedBodyHtml = CommunicationEngine.renderTemplateHtml({
+        title: manualSubject,
+        body_html: `<p style="line-height:1.6; color:#cccccc;">${manualBody.replace(/\n/g, '<br />')}</p>`,
+        button_text: manualButtonText,
+        button_link: manualButtonUrl,
+        banner_url: manualPhotoUrl,
+        footer_text: "DE GREAT JAPHET Direct Campaign Operations"
       });
 
-      if (res.success) {
-        setManualSendResult(`✓ Email sent successfully via SendGrid! Message ID: ${res.messageId || "OK"}`);
-        setManualRecipient("");
-        setManualSubject("");
-        setManualBody("");
-        setManualPhotoFile(null);
-        setManualPhotoUrl("");
-        onRefresh();
-      } else {
-        throw new Error(res.error || "SendGrid email delivery failed");
+      for (const email of targetRecipients) {
+        const res = await CommunicationEngine.send({
+          templateKey: "manual_campaign",
+          recipientEmail: email,
+          metadata: {
+            customSubject: manualSubject,
+            customBodyHtml: renderedBodyHtml,
+            audienceFilter,
+          },
+        });
+        if (res.success) sentCount++;
+        else failCount++;
       }
+
+      setManualSendResult(`✓ Manual Email Campaign delivered! Sent: ${sentCount}, Failed: ${failCount}`);
+      onRefresh();
     } catch (err: any) {
-      setManualSendResult(`Error: ${err.message}`);
+      setManualSendResult(`Error sending campaign: ${err.message}`);
     } finally {
       setSendingManual(false);
     }
@@ -834,7 +884,11 @@ function CommunicationCenterTab({
       const ok = await CommunicationEngine.updateTemplate(selectedTplKey, {
         name: currentTemplate?.name || selectedTplKey,
         subject: tplSubject,
+        title: tplTitle,
         body_html: tplBodyHtml,
+        button_text: tplButtonText,
+        button_link: tplButtonLink,
+        footer_text: tplFooterText,
         banner_url: banner,
       });
 
@@ -860,10 +914,10 @@ function CommunicationCenterTab({
         <div className="flex items-center justify-between border-b pb-4">
           <div>
             <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Mail className="text-gold" size={20} /> Customer Communication Engine
+              <Mail className="text-gold" size={20} /> Customer Communication Operating System
             </h2>
             <p className="text-xs text-muted-foreground mt-1">
-              Send manual rich emails with photo attachments, edit dynamic templates, and monitor SendGrid delivery history.
+              Send targeted manual campaigns with image attachments, edit automated templates, and monitor SendGrid logs.
             </p>
           </div>
           <div className="flex gap-2">
@@ -873,7 +927,7 @@ function CommunicationCenterTab({
                 commSubTab === "manual" ? "bg-gold text-black shadow-gold" : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Send size={14} /> Send Manual Email
+              <Send size={14} /> Manual Composer
             </button>
             <button
               onClick={() => setCommSubTab("templates")}
@@ -881,7 +935,7 @@ function CommunicationCenterTab({
                 commSubTab === "templates" ? "bg-gold text-black shadow-gold" : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Edit size={14} /> Edit Templates
+              <Edit size={14} /> Template Manager
             </button>
             <button
               onClick={() => setCommSubTab("logs")}
@@ -894,45 +948,51 @@ function CommunicationCenterTab({
           </div>
         </div>
 
-        {/* SUB-TAB 1: MANUAL EMAIL SENDING WITH PHOTO ATTACHMENT */}
+        {/* SUB-TAB 1: MANUAL EMAIL COMPOSER */}
         {commSubTab === "manual" && (
           <form onSubmit={handleSendManualEmail} className="space-y-4">
             <h3 className="text-sm font-semibold flex items-center gap-2 text-gold">
-              <Send size={16} /> Send Custom Manual Email / Campaign (Text + Photo Upload)
+              <Send size={16} /> Restore Manual Email Composer (Audience Filters + Banner Image + Live Preview)
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold mb-1">Select Customer / Recipient *</label>
+                <label className="block text-xs font-semibold mb-1">Target Audience Filter *</label>
                 <select
-                  value={customers.some(c => c.email === manualRecipient) ? manualRecipient : "custom"}
-                  onChange={(e) => {
-                    if (e.target.value !== "custom") setManualRecipient(e.target.value);
-                  }}
-                  className="w-full border rounded px-3 py-2 text-xs bg-background mb-2"
+                  value={audienceFilter}
+                  onChange={(e) => setAudienceFilter(e.target.value as any)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background font-medium mb-2"
                 >
-                  <option value="custom">— Select Registered Customer —</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.email}>
-                      {c.full_name ? `${c.full_name} (${c.email})` : c.email}
-                    </option>
-                  ))}
+                  <option value="all">All Registered Users ({customers.length})</option>
+                  <option value="customers">Customers Only ({customers.length})</option>
+                  <option value="admins">Admins & Staff ({roles.filter(r => r.role === 'admin' || r.role === 'super_admin').length})</option>
+                  <option value="super_admins">Super Admins Only ({roles.filter(r => r.role === 'super_admin').length})</option>
+                  <option value="recently_joined">Recently Joined (Last 30 Days)</option>
+                  <option value="collection_owners">Collection / Order Owners ({orders.length})</option>
+                  <option value="custom">Custom Selection / Single Email</option>
                 </select>
-                <input
-                  type="email"
-                  placeholder="Or enter recipient email address manually *"
-                  value={manualRecipient}
-                  onChange={(e) => setManualRecipient(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-xs bg-background"
-                  required
-                />
+
+                {audienceFilter === "custom" && (
+                  <input
+                    type="email"
+                    placeholder="Enter custom recipient email address *"
+                    value={manualRecipient}
+                    onChange={(e) => setManualRecipient(e.target.value)}
+                    className="w-full border rounded px-3 py-2 text-xs bg-background"
+                    required
+                  />
+                )}
+
+                <p className="text-[11px] text-gold font-medium mt-1">
+                  Targeted Recipients ({targetRecipients.length}): {targetRecipients.slice(0, 3).join(", ")}{targetRecipients.length > 3 ? "..." : ""}
+                </p>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold mb-1">Email Subject Line *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Official Quote & Catalog Presentation — DE GREAT JAPHET"
+                  placeholder="e.g. Official Project Estimate Presentation — DE GREAT JAPHET"
                   value={manualSubject}
                   onChange={(e) => setManualSubject(e.target.value)}
                   className="w-full border rounded px-3 py-2 text-xs bg-background"
@@ -941,68 +1001,105 @@ function CommunicationCenterTab({
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold mb-1">Email Message Body (Text or HTML)</label>
-              <textarea
-                rows={5}
-                placeholder="Type your message content here..."
-                value={manualBody}
-                onChange={(e) => setManualBody(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-xs bg-background font-sans"
-              />
-            </div>
-
-            {/* Photo / Image Upload section for manual email */}
-            <div className="border border-dashed border-border rounded-lg p-4 bg-muted/20 space-y-2">
-              <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <ImageIcon size={15} className="text-gold" /> Upload Photo / Image Attachment for Email
-              </label>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => openSystemImagePicker(handleAttachPhoto, manualFileRef.current)}
-                  className="px-4 py-2 border rounded-md text-xs hover:bg-muted transition flex items-center gap-1.5"
-                >
-                  <Upload size={14} /> Choose Photo
-                </button>
-                <input
-                  ref={manualFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleAttachPhoto(e.target.files?.[0] || null)}
-                />
-                {manualPhotoUrl ? (
-                  <div className="flex items-center gap-2">
-                    <img src={manualPhotoUrl} alt="Attachment" className="w-10 h-10 object-cover rounded border" />
-                    <span className="text-xs text-emerald-400 font-medium">✓ Photo attached!</span>
+            {/* Banner Image Upload & Controls (Upload, Preview, Replace, Remove) */}
+            <div className="border border-border/80 rounded-lg p-4 bg-muted/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <ImageIcon size={15} className="text-gold" /> Banner Image Attachment
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openSystemImagePicker(handleAttachPhoto, manualFileRef.current)}
+                    className="px-3 py-1 border rounded text-[11px] hover:bg-muted transition flex items-center gap-1"
+                  >
+                    <Upload size={12} /> {manualPhotoUrl ? "Replace Banner" : "Upload Banner"}
+                  </button>
+                  {manualPhotoUrl && (
                     <button
                       type="button"
                       onClick={() => { setManualPhotoFile(null); setManualPhotoUrl(""); }}
-                      className="text-xs text-red-400 hover:underline"
+                      className="px-3 py-1 border border-red-500/40 text-red-400 rounded text-[11px] hover:bg-red-500/10 transition flex items-center gap-1"
                     >
-                      Remove
+                      <Trash2 size={12} /> Remove
                     </button>
+                  )}
+                </div>
+              </div>
+
+              <input
+                ref={manualFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleAttachPhoto(e.target.files?.[0] || null)}
+              />
+
+              {manualPhotoUrl ? (
+                <div className="border rounded p-2 bg-black/40 flex items-center gap-3">
+                  <img src={manualPhotoUrl} alt="Banner Preview" className="w-20 h-12 object-cover rounded border" />
+                  <div>
+                    <p className="text-xs font-semibold text-gold">Banner Image Preview</p>
+                    <p className="text-[10px] text-muted-foreground truncate max-w-xs">{manualPhotoUrl}</p>
                   </div>
-                ) : (
-                  <span className="text-xs text-muted-foreground">No photo selected.</span>
-                )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No banner image attached.</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1">Rich Text Body Content</label>
+              <textarea
+                rows={5}
+                placeholder="Type main email message text..."
+                value={manualBody}
+                onChange={(e) => setManualBody(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-xs bg-background font-sans"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1">Action Button Text</label>
+                <input
+                  type="text"
+                  value={manualButtonText}
+                  onChange={(e) => setManualButtonText(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1">Action Button Target URL</label>
+                <input
+                  type="text"
+                  value={manualButtonUrl}
+                  onChange={(e) => setManualButtonUrl(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background"
+                />
               </div>
             </div>
 
-            {/* Live Preview Box */}
+            {/* Live Interactive Email Preview Box */}
             <div className="border rounded-lg p-4 bg-black/40 space-y-2">
               <p className="text-xs font-semibold text-gold flex items-center gap-1.5">
-                <Eye size={14} /> Outgoing Email Live Visual Preview
+                <Eye size={14} /> Outgoing Campaign Live Visual Preview
               </p>
-              <div className="border border-border/60 rounded p-4 bg-[#111] text-xs text-foreground space-y-3">
-                <p className="font-semibold text-gold">Subject: {manualSubject || "Direct Communication from DE GREAT JAPHET"}</p>
-                <div className="border-t border-border/40 pt-3">
-                  {manualPhotoUrl && (
-                    <img src={manualPhotoUrl} alt="Attached Photo" className="w-full max-h-48 object-cover rounded mb-3" />
-                  )}
-                  <p>{manualBody || "Your email message body text will appear here."}</p>
-                </div>
+              <div className="border border-border/60 rounded p-4 bg-[#111] text-xs text-foreground">
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: CommunicationEngine.renderTemplateHtml({
+                      title: manualSubject,
+                      body_html: `<p style="line-height:1.6; color:#cccccc;">${manualBody.replace(/\n/g, '<br />')}</p>`,
+                      button_text: manualButtonText,
+                      button_link: manualButtonUrl,
+                      banner_url: manualPhotoUrl,
+                      footer_text: "DE GREAT JAPHET Direct Campaign Operations"
+                    }),
+                  }}
+                />
               </div>
             </div>
 
@@ -1014,25 +1111,25 @@ function CommunicationCenterTab({
               ) : <span />}
               <button
                 type="submit"
-                disabled={sendingManual}
+                disabled={sendingManual || targetRecipients.length === 0}
                 className="px-6 py-2.5 bg-gradient-gold text-[var(--cta-foreground)] font-semibold rounded-lg text-xs shadow-gold hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
               >
-                <Send size={15} /> {sendingManual ? "Sending via SendGrid..." : "Send Email Now"}
+                <Send size={15} /> {sendingManual ? "Dispatching Campaign..." : `Send Campaign (${targetRecipients.length} Recipients)`}
               </button>
             </div>
           </form>
         )}
 
-        {/* SUB-TAB 2: TEMPLATE EDITOR & BANNER MANAGER */}
+        {/* SUB-TAB 2: TEMPLATE MANAGER */}
         {commSubTab === "templates" && (
           <form onSubmit={handleSaveTemplate} className="space-y-4">
             <h3 className="text-sm font-semibold flex items-center gap-2 text-gold">
-              <Edit size={16} /> Edit Automated Email Templates & Customize Pictures
+              <Edit size={16} /> Edit Automated Email Templates (Subject, Title, Body, Button, Footer, Banner Image)
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs font-semibold mb-1">Select Email Template to Edit *</label>
+                <label className="block text-xs font-semibold mb-1">Select Template *</label>
                 <select
                   value={selectedTplKey}
                   onChange={(e) => setSelectedTplKey(e.target.value as TemplateKey)}
@@ -1042,13 +1139,14 @@ function CommunicationCenterTab({
                   <option value="collection_reminder">Collection Reminder (24h)</option>
                   <option value="abandoned_collection">Abandoned Collection (72h)</option>
                   <option value="monthly_newsletter">Monthly Newsletter</option>
-                  <option value="holiday_campaign">Holiday Campaign</option>
+                  <option value="holiday_campaign">Holiday Special Campaign</option>
+                  <option value="manual_campaign">Manual Campaign Template</option>
                   <option value="system_notification">System Notification</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1">Template Subject Line *</label>
+                <label className="block text-xs font-semibold mb-1">Subject Line *</label>
                 <input
                   type="text"
                   value={tplSubject}
@@ -1057,68 +1155,92 @@ function CommunicationCenterTab({
                   required
                 />
               </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1">Header Title *</label>
+                <input
+                  type="text"
+                  value={tplTitle}
+                  onChange={(e) => setTplTitle(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background"
+                  required
+                />
+              </div>
             </div>
 
-            {/* Template Banner / Picture Upload */}
+            {/* Template Banner Image Controls (Upload, Preview, Replace, Remove) */}
             <div className="border border-border/80 rounded-lg p-4 bg-muted/20 space-y-3">
-              <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <ImageIcon size={15} className="text-gold" /> Template Picture / Banner Header
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <ImageIcon size={15} className="text-gold" /> Template Banner Image (Upload / Preview / Replace / Remove)
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openSystemImagePicker(setTplBannerFile, tplFileRef.current)}
+                    className="px-3 py-1 border rounded text-[11px] hover:bg-muted transition flex items-center gap-1"
+                  >
+                    <Upload size={12} /> {tplBannerUrl || tplBannerFile ? "Replace Banner" : "Upload Banner"}
+                  </button>
+                  {(tplBannerUrl || tplBannerFile) && (
+                    <button
+                      type="button"
+                      onClick={() => { setTplBannerFile(null); setTplBannerUrl(""); }}
+                      className="px-3 py-1 border border-red-500/40 text-red-400 rounded text-[11px] hover:bg-red-500/10 transition flex items-center gap-1"
+                    >
+                      <Trash2 size={12} /> Remove
+                    </button>
+                  )}
+                </div>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <input
+                ref={tplFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => setTplBannerFile(e.target.files?.[0] || null)}
+              />
+
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setTplBannerUrl("/assets/email_welcome_banner.jpg")}
-                  className={`p-2 border rounded-md text-xs text-left ${tplBannerUrl === "/assets/email_welcome_banner.jpg" ? "border-gold text-gold" : ""}`}
+                  className={`p-1.5 border rounded text-[11px] ${tplBannerUrl === "/assets/email_welcome_banner.jpg" ? "border-gold text-gold" : ""}`}
                 >
-                  Use Welcome Banner Placeholder
+                  Welcome Banner Placeholder
                 </button>
                 <button
                   type="button"
                   onClick={() => setTplBannerUrl("/assets/email_collection_banner.jpg")}
-                  className={`p-2 border rounded-md text-xs text-left ${tplBannerUrl === "/assets/email_collection_banner.jpg" ? "border-gold text-gold" : ""}`}
+                  className={`p-1.5 border rounded text-[11px] ${tplBannerUrl === "/assets/email_collection_banner.jpg" ? "border-gold text-gold" : ""}`}
                 >
-                  Use Collection Banner Placeholder
+                  Collection Banner Placeholder
                 </button>
                 <button
                   type="button"
                   onClick={() => setTplBannerUrl("/assets/email_newsletter_banner.jpg")}
-                  className={`p-2 border rounded-md text-xs text-left ${tplBannerUrl === "/assets/email_newsletter_banner.jpg" ? "border-gold text-gold" : ""}`}
+                  className={`p-1.5 border rounded text-[11px] ${tplBannerUrl === "/assets/email_newsletter_banner.jpg" ? "border-gold text-gold" : ""}`}
                 >
-                  Use Newsletter Banner Placeholder
+                  Newsletter Banner Placeholder
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => openSystemImagePicker(setTplBannerFile, tplFileRef.current)}
-                  className="px-4 py-2 border rounded-md text-xs hover:bg-muted transition flex items-center gap-1.5"
-                >
-                  <Upload size={14} /> Upload Custom Banner Picture
-                </button>
-                <input
-                  ref={tplFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => setTplBannerFile(e.target.files?.[0] || null)}
-                />
-                {tplBannerFile ? (
-                  <span className="text-xs text-emerald-400 font-medium">Selected: {tplBannerFile.name}</span>
-                ) : (
-                  <span className="text-xs text-muted-foreground truncate max-w-xs">Current Banner URL: {tplBannerUrl}</span>
-                )}
-              </div>
+              {(tplBannerFile || tplBannerUrl) && (
+                <div className="border rounded p-2 bg-black/40 flex items-center gap-3">
+                  <img src={tplBannerFile ? URL.createObjectURL(tplBannerFile) : tplBannerUrl} alt="Banner Preview" className="w-20 h-12 object-cover rounded border" />
+                  <p className="text-[11px] text-muted-foreground truncate max-w-xs">{tplBannerFile ? tplBannerFile.name : tplBannerUrl}</p>
+                </div>
+              )}
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold">Template HTML Body Content</label>
+                <label className="block text-xs font-semibold">Email Body HTML / Text</label>
                 <span className="text-[10px] text-gold font-mono">Variables: {"{{customer_name}}, {{shop_url}}, {{banner_url}}"}</span>
               </div>
               <textarea
-                rows={8}
+                rows={6}
                 value={tplBodyHtml}
                 onChange={(e) => setTplBodyHtml(e.target.value)}
                 className="w-full border rounded px-3 py-2 text-xs bg-background font-mono leading-relaxed"
@@ -1126,18 +1248,54 @@ function CommunicationCenterTab({
               />
             </div>
 
-            {/* Template Live Visual Preview */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1">Button Text</label>
+                <input
+                  type="text"
+                  value={tplButtonText}
+                  onChange={(e) => setTplButtonText(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1">Button Link / Route</label>
+                <input
+                  type="text"
+                  value={tplButtonLink}
+                  onChange={(e) => setTplButtonLink(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1">Footer Text</label>
+                <input
+                  type="text"
+                  value={tplFooterText}
+                  onChange={(e) => setTplFooterText(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background"
+                />
+              </div>
+            </div>
+
+            {/* Template Rendered Live Visual Preview */}
             <div className="border rounded-lg p-4 bg-black/40 space-y-2">
               <p className="text-xs font-semibold text-gold flex items-center gap-1.5">
-                <Eye size={14} /> Template Live Rendered Visual Preview
+                <Eye size={14} /> Template Rendered Visual Preview
               </p>
               <div className="border border-border/60 rounded p-4 bg-[#111] text-xs text-foreground overflow-x-auto">
                 <div
                   dangerouslySetInnerHTML={{
-                    __html: CommunicationEngine.interpolate(tplBodyHtml, {
-                      customer_name: "Valued Customer",
+                    __html: CommunicationEngine.renderTemplateHtml({
+                      title: tplTitle,
+                      body_html: tplBodyHtml,
+                      button_text: tplButtonText,
+                      button_link: tplButtonLink,
+                      footer_text: tplFooterText,
                       banner_url: tplBannerFile ? URL.createObjectURL(tplBannerFile) : tplBannerUrl,
-                    }),
+                    }, { customer_name: "Valued Customer" }),
                   }}
                 />
               </div>
@@ -1154,13 +1312,13 @@ function CommunicationCenterTab({
                 disabled={savingTpl}
                 className="px-6 py-2.5 bg-gradient-gold text-[var(--cta-foreground)] font-semibold rounded-lg text-xs shadow-gold hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
               >
-                <Save size={15} /> {savingTpl ? "Saving Template..." : "Save Template Changes"}
+                <Save size={15} /> {savingTpl ? "Saving Template Changes..." : "Save Template Changes"}
               </button>
             </div>
           </form>
         )}
 
-        {/* SUB-TAB 3: DELIVERY HISTORY & LOGS */}
+        {/* SUB-TAB 3: DELIVERY LOGS */}
         {commSubTab === "logs" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -1471,7 +1629,7 @@ function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customer
   const [saving, setSaving] = useState<boolean>(false);
 
   // Merge registered customers with existing user roles so ALL signed in users appear
-  const userMap = new Map<string, { userId: string; email: string; name: string; currentRole: string }>();
+  const userMap = new Map<string, { userId: string; email: string; name: string; currentRole: string; joinedDate: string; lastLogin: string; status: string }>();
 
   // Add all from customers table
   customers.forEach((c) => {
@@ -1482,6 +1640,9 @@ function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customer
       email: c.email,
       name: c.full_name || c.email.split("@")[0],
       currentRole: r?.role || "customer",
+      joinedDate: c.created_at ? new Date(c.created_at).toLocaleDateString() : "—",
+      lastLogin: c.last_login_at ? new Date(c.last_login_at).toLocaleString() : c.created_at ? new Date(c.created_at).toLocaleDateString() : "Active Now",
+      status: "Active",
     });
   });
 
@@ -1493,6 +1654,9 @@ function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customer
         email: r.email || "—",
         name: r.email ? r.email.split("@")[0] : "System User",
         currentRole: r.role,
+        joinedDate: r.created_at ? new Date(r.created_at).toLocaleDateString() : "—",
+        lastLogin: "Active Now",
+        status: "Active",
       });
     }
   });
@@ -1527,7 +1691,7 @@ function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customer
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Shield className="text-gold" size={20} /> User & Role Management ({allUsersList.length})
           </h2>
-          <p className="text-xs text-muted-foreground">Assign or modify permissions for all registered system users.</p>
+          <p className="text-xs text-muted-foreground">Every registered user automatically appears here for immediate role & permission management.</p>
         </div>
         {statusMsg && (
           <p className={`text-xs font-medium ${statusMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
@@ -1540,10 +1704,12 @@ function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customer
         <table className="w-full text-xs text-left">
           <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
             <tr>
-              <th className="p-3">User Name</th>
+              <th className="p-3">Full Name</th>
               <th className="p-3">Email Address</th>
-              <th className="p-3">User ID</th>
-              <th className="p-3">Assigned Permission Role</th>
+              <th className="p-3">Registration Date</th>
+              <th className="p-3">Current Role</th>
+              <th className="p-3">Status</th>
+              <th className="p-3">Last Login</th>
               <th className="p-3 text-right">Assign Role</th>
             </tr>
           </thead>
@@ -1551,12 +1717,14 @@ function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customer
             {allUsersList.map((u) => (
               <tr key={u.userId} className="hover:bg-muted/20">
                 <td className="p-3 font-medium text-foreground">{u.name}</td>
-                <td className="p-3 text-muted-foreground">{u.email}</td>
-                <td className="p-3 font-mono text-[10px] text-muted-foreground">{u.userId}</td>
+                <td className="p-3 text-gold font-medium">{u.email}</td>
+                <td className="p-3 text-muted-foreground">{u.joinedDate}</td>
                 <td className="p-3">
                   <span
                     className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      u.currentRole === "super_admin" || u.currentRole === "admin"
+                      u.currentRole === "super_admin"
+                        ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
+                        : u.currentRole === "admin"
                         ? "bg-amber-500/20 text-gold border border-gold/40"
                         : u.currentRole === "staff"
                         ? "bg-blue-500/20 text-blue-400"
@@ -1566,6 +1734,12 @@ function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customer
                     {u.currentRole}
                   </span>
                 </td>
+                <td className="p-3">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400">
+                    {u.status}
+                  </span>
+                </td>
+                <td className="p-3 text-muted-foreground">{u.lastLogin}</td>
                 <td className="p-3 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <select
