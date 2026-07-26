@@ -3,8 +3,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES } from "@/lib/categories";
-import { Search, Globe, Tag, Sparkles, Mail, Send, Filter, History as HistoryIcon, LayoutTemplate, BarChart3, CheckCircle, Clock, Zap } from "lucide-react";
-import { CommunicationEngine, EmailTemplate, EmailLog } from "@/lib/communicationEngine";
+import { Search, Globe, Tag, Sparkles, Mail, Send, Filter, History as HistoryIcon, LayoutTemplate, BarChart3, CheckCircle, Clock, Zap, UserCheck, Shield, Upload, Image as ImageIcon, Edit, Eye, Save } from "lucide-react";
+import { CommunicationEngine, EmailTemplate, EmailLog, DEFAULT_TEMPLATES, TemplateKey } from "@/lib/communicationEngine";
 
 export const Route = createFileRoute("/admin")({
   component: AdminDashboard,
@@ -96,6 +96,15 @@ async function openSystemImagePicker(setFile: ImageFileSetter, fallbackInput: HT
   }
 
   fallbackInput?.click();
+}
+
+async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch("/api/upload-image", { method: "POST", body: formData });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Image upload failed");
+  return data.url;
 }
 
 function AdminDashboard() {
@@ -398,65 +407,47 @@ function ProductsTab({
           placeholder="Search catalog products..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="border rounded-md px-3 py-2 text-sm bg-background w-full max-w-sm"
+          className="border rounded px-3 py-2 text-xs bg-background max-w-xs w-full"
         />
-        <p className="text-xs text-muted-foreground">{filtered.length} products found</p>
+        <p className="text-xs text-muted-foreground">Showing {filtered.length} products</p>
       </div>
 
       <div className="border rounded-xl overflow-hidden bg-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
-              <tr>
-                <th className="p-3">Image</th>
-                <th className="p-3">Product Name</th>
-                <th className="p-3">Category</th>
-                <th className="p-3">Family</th>
-                <th className="p-3">Price</th>
-                <th className="p-3 text-right">Actions</th>
+        <table className="w-full text-xs text-left">
+          <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
+            <tr>
+              <th className="p-3">Product Name</th>
+              <th className="p-3">Category</th>
+              <th className="p-3">Family</th>
+              <th className="p-3">Price</th>
+              <th className="p-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/40">
+            {filtered.map((p) => (
+              <tr key={p.id} className="hover:bg-muted/20">
+                <td className="p-3 font-medium flex items-center gap-2">
+                  {p.product_image && <img src={p.product_image} alt="" className="w-8 h-8 object-cover rounded" />}
+                  <span>{p.product_name}</span>
+                </td>
+                <td className="p-3 text-muted-foreground">{p.category || "—"}</td>
+                <td className="p-3 text-muted-foreground">{p.family || "—"}</td>
+                <td className="p-3 font-semibold text-gold">₦{Number(p.price || 0).toLocaleString()}</td>
+                <td className="p-3 text-right space-x-2">
+                  <button onClick={() => onEdit(p)} className="text-gold hover:underline">Edit</button>
+                  <button onClick={() => onDelete(p.id)} className="text-red-400 hover:underline">Delete</button>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-muted/20">
-                  <td className="p-3">
-                    {p.product_image ? (
-                      <img src={p.product_image} alt={p.product_name} className="w-10 h-10 object-cover rounded border" />
-                    ) : (
-                      <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-[9px]">No img</div>
-                    )}
-                  </td>
-                  <td className="p-3 font-medium text-foreground">{p.product_name}</td>
-                  <td className="p-3 text-muted-foreground">{p.category || "—"}</td>
-                  <td className="p-3 text-muted-foreground">{p.family || "—"}</td>
-                  <td className="p-3 text-gold font-semibold">
-                    {p.price != null ? `₦${Number(p.price).toLocaleString()}` : "Price on Request"}
-                  </td>
-                  <td className="p-3 text-right space-x-2">
-                    <button onClick={() => onEdit(p)} className="text-blue-500 hover:underline">Edit</button>
-                    <button onClick={() => onDelete(p.id)} className="text-red-500 hover:underline">Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-async function uploadImage(file: File): Promise<string> {
-  const ext = file.name.split(".").pop();
-  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const { error } = await supabase.storage.from("product-images").upload(path, file);
-  if (error) throw error;
-  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-  return data.publicUrl;
-}
-
 function UploadTab({ onDone }: { onDone: () => void }) {
-  const [name, setName] = useState("");
+  const [productName, setProductName] = useState("");
   const [category, setCategory] = useState("");
   const [family, setFamily] = useState("");
   const [price, setPrice] = useState("");
@@ -464,75 +455,88 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   const [description, setDescription] = useState("");
   const [searchKeywords, setSearchKeywords] = useState("");
   const [searchTags, setSearchTags] = useState("");
-
-  // AI Product Intelligence & Google SEO State
-  const [generatingAi, setGeneratingAi] = useState(false);
-  const [showGoogleSeo, setShowGoogleSeo] = useState(false);
-  const [showPromptManager, setShowPromptManager] = useState(false);
-  const [seoTitle, setSeoTitle] = useState("");
-  const [metaDescription, setMetaDescription] = useState("");
-  const [seoKeywords, setSeoKeywords] = useState("");
-  const [slug, setSlug] = useState("");
-  const [canonicalProductName, setCanonicalProductName] = useState("");
-  const [relatedTerms, setRelatedTerms] = useState("");
-  const [productSummary, setProductSummary] = useState("");
-  const [aiConfidence, setAiConfidence] = useState<number | null>(null);
-
   const [initialFile, setInitialFile] = useState<File | null>(null);
   const [finishedFile, setFinishedFile] = useState<File | null>(null);
-  const [status, setStatus] = useState("");
+
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
+  const [showPromptManager, setShowPromptManager] = useState(false);
+
   const initRef = useRef<HTMLInputElement>(null);
   const finRef = useRef<HTMLInputElement>(null);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!initialFile) {
-      alert("Initial product image is required.");
+  const handleGenerateAi = async () => {
+    if (!productName.trim()) {
+      alert("Please enter a product name first before generating AI intelligence.");
       return;
     }
     setBusy(true);
-    setStatus("Uploading initial image...");
+    setStatus("Generating AI Product Intelligence & SEO...");
     try {
-      const productImageUrl = await uploadImage(initialFile);
-      let finishedImageUrl: string | null = null;
-      if (finishedFile) {
-        setStatus("Uploading finished image...");
-        finishedImageUrl = await uploadImage(finishedFile);
+      let initUrl = "";
+      if (initialFile) {
+        setStatus("Uploading image for AI visual analysis...");
+        initUrl = await uploadImage(initialFile);
       }
-      setStatus("Saving product to database...");
-      const { data, error } = await supabase
-        .from("products")
-        .insert({
-          product_name: name,
-          category: category || null,
-          family: family.trim() || null,
-          price: price ? Number(price) : null,
-          currency,
-          product_image: productImageUrl,
-          finished_image: finishedImageUrl,
-          full_details: description || null,
-          search_keywords: searchKeywords.trim() || null,
-          search_tags: searchTags.trim() || null,
-          seo_title: seoTitle || null,
-          meta_description: metaDescription || null,
-          seo_keywords: seoKeywords ? seoKeywords.split(",").map(s => s.trim()).filter(Boolean) : null,
-          slug: slug || null,
-          canonical_product_name: canonicalProductName || null,
-          related_terms: relatedTerms ? relatedTerms.split(",").map(s => s.trim()).filter(Boolean) : null,
-          product_summary: productSummary || null,
-          ai_confidence: aiConfidence || null,
-        })
-        .select()
-        .single();
+      const aiData = await generateProductIntelligence({
+        productName,
+        category: category || "Building Materials",
+        family,
+        price: price ? Number(price) : undefined,
+        currency,
+        description,
+        manualSpecs: `Family: ${family}, Tags: ${searchTags}`,
+        productImage: initUrl || undefined,
+      });
+
+      if (aiData) {
+        if (aiData.description) setDescription(aiData.description);
+        if (Array.isArray(aiData.search_keywords)) setSearchKeywords(aiData.search_keywords.join(", "));
+        if (Array.isArray(aiData.seo_keywords)) setSearchTags(aiData.seo_keywords.join(", "));
+        setStatus("✓ AI Product Intelligence generated successfully!");
+      }
+    } catch (e: any) {
+      console.error(e);
+      setStatus("Error generating AI: " + (e.message || "Failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!initialFile) {
+      alert("Please select a main product image.");
+      return;
+    }
+    setBusy(true);
+    setStatus("Uploading main product image...");
+    try {
+      const initUrl = await uploadImage(initialFile);
+      let finUrl = "";
+      if (finishedFile) {
+        setStatus("Uploading finished/installed image...");
+        finUrl = await uploadImage(finishedFile);
+      }
+
+      setStatus("Saving product catalog entry...");
+      const { error } = await supabase.from("products").insert({
+        product_name: productName,
+        category: category || null,
+        family: family.trim() || null,
+        price: price ? Number(price) : null,
+        currency,
+        product_image: initUrl,
+        finished_image: finUrl || null,
+        full_details: description || null,
+        search_keywords: searchKeywords.trim() || null,
+        search_tags: searchTags.trim() || null,
+      });
+
       if (error) throw error;
       setStatus("✓ Product uploaded successfully!");
-      setName(""); setCategory(""); setFamily(""); setPrice(""); setCurrency("NGN"); setDescription("");
-      setSearchKeywords(""); setSearchTags(""); setSeoTitle(""); setMetaDescription(""); setSeoKeywords("");
-      setSlug(""); setCanonicalProductName(""); setRelatedTerms(""); setProductSummary(""); setAiConfidence(null);
-      setInitialFile(null); setFinishedFile(null);
-      if (initRef.current) initRef.current.value = "";
-      if (finRef.current) finRef.current.value = "";
+      setProductName(""); setCategory(""); setFamily(""); setPrice(""); setDescription("");
+      setSearchKeywords(""); setSearchTags(""); setInitialFile(null); setFinishedFile(null);
       onDone();
     } catch (err: any) {
       console.error(err);
@@ -543,40 +547,55 @@ function UploadTab({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <form onSubmit={submit} className="max-w-2xl space-y-6 border rounded-xl p-6 bg-card">
-      <div>
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Sparkles className="text-gold" size={20} /> Upload New Product
-        </h2>
-        <p className="text-xs text-muted-foreground mt-1">Single source of truth product configuration for Google, WhatsApp & Showroom.</p>
+    <form onSubmit={handleSubmit} className="border rounded-xl p-6 bg-card space-y-6 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between border-b pb-4">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Sparkles className="text-gold" size={20} /> Upload Product with AI Intelligence
+          </h2>
+          <p className="text-xs text-muted-foreground">Every product automatically becomes a Google-indexable page & 2-level searchable showroom item.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowPromptManager(true)}
+          className="text-xs border border-gold/40 text-gold hover:bg-gold/10 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition"
+        >
+          <Sparkles size={14} /> Prompt Manager
+        </button>
       </div>
 
-      <div className="space-y-4">
-        <input
-          type="text"
-          placeholder="Product Name *"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-          required
-        />
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold mb-1">Product Name *</label>
+          <input
+            type="text"
+            required
+            placeholder="e.g. Virony 60x60 Luxury Polish Tile"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold mb-1">Category</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            required
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
           >
-            <option value="">Select Category *</option>
+            <option value="">— Select Category —</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+        </div>
 
+        <div>
+          <label className="block text-xs font-semibold mb-1">Family / Collection Series</label>
           <input
             type="text"
-            placeholder="Product Family (e.g. Turkish Luxury, 60x60)"
+            placeholder="e.g. 60x60, Turkish Armored, Royal Gold"
             value={family}
             onChange={(e) => setFamily(e.target.value)}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
@@ -584,218 +603,71 @@ function UploadTab({ onDone }: { onDone: () => void }) {
         </div>
 
         <div className="flex gap-2">
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            className="border rounded-md px-3 py-2 text-sm bg-background"
-          >
-            <option value="NGN">Naira (₦)</option>
-            <option value="USD">USD ($)</option>
-          </select>
-          <input
-            type="number"
-            step="0.01"
-            placeholder="Price"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-          />
-        </div>
-
-        {/* AI Generation Action */}
-        <div className="p-4 rounded-xl border border-[oklch(0.82_0.14_86/0.25)] bg-card/60 space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Sparkles className="text-gold" size={14} /> Product Intelligence Engine
-              </p>
-              <p className="text-[11px] text-muted-foreground">Generate authoritative Google SEO & Showroom metadata in one click.</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPromptManager(true)}
-                className="px-2.5 py-1.5 rounded-md border border-border text-[11px] font-medium hover:border-gold hover:text-gold transition"
-              >
-                Edit AI Prompt
-              </button>
-              <button
-                type="button"
-                disabled={generatingAi || !name.trim()}
-                onClick={async () => {
-                  setGeneratingAi(true);
-                  try {
-                    let imgUrl: string | undefined = undefined;
-                    if (initialFile) {
-                      imgUrl = await uploadImage(initialFile);
-                    }
-                    const aiResult = await generateProductIntelligence({
-                      productName: name,
-                      category,
-                      family,
-                      price: price ? Number(price) : undefined,
-                      currency,
-                      description,
-                      productImage: imgUrl,
-                    });
-
-                    setDescription(aiResult.description);
-                    setSeoTitle(aiResult.seo_title);
-                    setMetaDescription(aiResult.meta_description);
-                    setSeoKeywords(Array.isArray(aiResult.seo_keywords) ? aiResult.seo_keywords.join(", ") : aiResult.seo_keywords || "");
-                    setSlug(aiResult.slug);
-                    setSearchKeywords(Array.isArray(aiResult.search_keywords) ? aiResult.search_keywords.join(", ") : aiResult.search_keywords || "");
-                    setCanonicalProductName(aiResult.canonical_product_name);
-                    setRelatedTerms(Array.isArray(aiResult.related_terms) ? aiResult.related_terms.join(", ") : aiResult.related_terms || "");
-                    setProductSummary(aiResult.product_summary);
-                    setAiConfidence(aiResult.confidence);
-                  } catch (err: any) {
-                    alert("AI Generation Error: " + (err.message || "Failed to generate product intelligence"));
-                  } finally {
-                    setGeneratingAi(false);
-                  }
-                }}
-                className="px-3 py-1.5 rounded-md bg-gradient-gold text-[var(--cta-foreground)] font-semibold text-xs flex items-center gap-1.5 hover:opacity-90 disabled:opacity-50 transition shadow-gold"
-              >
-                <Sparkles size={13} className={generatingAi ? "animate-spin" : ""} />
-                {generatingAi ? "Generating..." : "Generate Product Intelligence"}
-              </button>
-            </div>
+          <div className="w-1/3">
+            <label className="block text-xs font-semibold mb-1">Currency</label>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="w-full border rounded-md px-2 py-2 text-sm bg-background"
+            >
+              <option value="NGN">NGN (₦)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+          </div>
+          <div className="w-2/3">
+            <label className="block text-xs font-semibold mb-1">Price</label>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="e.g. 18500"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+            />
           </div>
         </div>
+      </div>
 
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={handleGenerateAi}
+          disabled={busy || !productName.trim()}
+          className="w-full py-2.5 bg-gold/10 border border-gold/40 text-gold hover:bg-gold/20 font-semibold rounded-lg text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
+        >
+          <Sparkles size={16} /> Auto-Generate AI Description, SEO & Level-2 Search Metadata
+        </button>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold mb-1">Unified Product Description (AI Generated or Manual)</label>
+        <textarea
+          rows={4}
+          placeholder="Authoritative description populated automatically by AI..."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-semibold mb-1">Product Description</label>
-          <textarea
-            placeholder="Unified Product Description (Generated by AI or entered manually)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-          />
-        </div>
-
-        {/* Collapsible Google & Search Intelligence Section */}
-        <div className="border rounded-xl p-3 bg-muted/20">
-          <button
-            type="button"
-            onClick={() => setShowGoogleSeo(!showGoogleSeo)}
-            className="w-full flex items-center justify-between text-xs font-semibold text-foreground hover:text-gold transition"
-          >
-            <span className="flex items-center gap-1.5">
-              <Globe size={14} className="text-gold" /> Google & Search Intelligence
-            </span>
-            <span className="text-[11px] text-muted-foreground">
-              {showGoogleSeo ? "▲ Collapse" : "▼ Expand to Review / Edit"}
-            </span>
-          </button>
-
-          {showGoogleSeo && (
-            <div className="mt-3 space-y-3 pt-3 border-t border-border/60 text-xs">
-              <div>
-                <label className="block text-[11px] font-medium mb-1">SEO Title (Google Title)</label>
-                <input
-                  type="text"
-                  value={seoTitle}
-                  onChange={(e) => setSeoTitle(e.target.value)}
-                  placeholder="e.g. Luxury Virony Marble Tile | DE GREAT JAPHET"
-                  className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium mb-1">Meta Description (Google Snippet)</label>
-                <textarea
-                  rows={2}
-                  value={metaDescription}
-                  onChange={(e) => setMetaDescription(e.target.value)}
-                  placeholder="e.g. Premium marble tile in Lagos, Nigeria..."
-                  className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[11px] font-medium mb-1">Product URL Slug</label>
-                  <input
-                    type="text"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                    placeholder="e.g. luxury-virony-marble-tile"
-                    className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-medium mb-1">Search Alias / Canonical Name</label>
-                  <input
-                    type="text"
-                    value={canonicalProductName}
-                    onChange={(e) => setCanonicalProductName(e.target.value)}
-                    placeholder="e.g. Virony White Porcelain Tile"
-                    className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium mb-1">Google SEO Keywords (Comma Separated)</label>
-                <input
-                  type="text"
-                  value={seoKeywords}
-                  onChange={(e) => setSeoKeywords(e.target.value)}
-                  placeholder="e.g. tiles, marble tile, virony tile"
-                  className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium mb-1">Related Search Terms (Hidden Search Intelligence)</label>
-                <input
-                  type="text"
-                  value={relatedTerms}
-                  onChange={(e) => setRelatedTerms(e.target.value)}
-                  placeholder="e.g. living room tile, floor tile, 60x60 tile"
-                  className="w-full border rounded px-2.5 py-1.5 text-xs bg-background"
-                />
-              </div>
-
-              {aiConfidence != null && (
-                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
-                  <CheckCircle size={12} className="text-emerald-500" />
-                  Internal AI Confidence Score: <span className="font-semibold text-foreground">{(aiConfidence * 100).toFixed(0)}%</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {showPromptManager && (
-          <PromptTemplateManagerModal onClose={() => setShowPromptManager(false)} />
-        )}
-
-        {/* Master Search Keywords */}
-        <div>
-          <label className="block text-xs font-semibold text-foreground mb-1 flex items-center gap-1.5">
-            <Search size={14} className="text-gold" /> Master Search Keywords
-          </label>
+          <label className="block text-xs font-semibold mb-1">Master Search Keywords (Level 2 Index)</label>
           <input
             type="text"
-            placeholder="e.g. security door, armored door, luxury entrance, Turkish steel door"
+            placeholder="e.g. polished marble, living room floor tiles"
             value={searchKeywords}
             onChange={(e) => setSearchKeywords(e.target.value)}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
           />
-          <p className="text-[11px] text-muted-foreground mt-1">Shared by Google Indexing, Internal Showroom Search, and Recommendations.</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Used for Level-2 showroom search matching.</p>
         </div>
 
-        {/* Master Search Tags */}
         <div>
-          <label className="block text-xs font-semibold text-foreground mb-1 flex items-center gap-1.5">
-            <Tag size={14} className="text-gold" /> Master Search Tags
-          </label>
+          <label className="block text-xs font-semibold mb-1">Master Search Tags (Level 2 Index)</label>
           <input
             type="text"
-            placeholder="e.g. premium, heavy-duty, exterior, modern-design"
+            placeholder="e.g. virony, turkish, luxury, imported"
             value={searchTags}
             onChange={(e) => setSearchTags(e.target.value)}
             className="w-full border rounded-md px-3 py-2 text-sm bg-background"
@@ -804,7 +676,6 @@ function UploadTab({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
-      {/* Image Uploads */}
       <div className="space-y-4 pt-2 border-t">
         <div>
           <p className="text-xs font-semibold mb-2">1. Initial Product Image *</p>
@@ -842,6 +713,8 @@ function UploadTab({ onDone }: { onDone: () => void }) {
       >
         {busy ? "Uploading Product..." : "Publish Product"}
       </button>
+
+      {showPromptManager && <PromptTemplateManagerModal onClose={() => setShowPromptManager(false)} />}
     </form>
   );
 }
@@ -857,175 +730,503 @@ function CommunicationCenterTab({
   customers: Customer[];
   onRefresh: () => void;
 }) {
+  const [commSubTab, setCommSubTab] = useState<"manual" | "templates" | "logs">("manual");
+  
+  // Manual Email state
+  const [manualTemplateKey, setManualTemplateKey] = useState<TemplateKey>("manual_campaign");
+  const [manualRecipient, setManualRecipient] = useState<string>("");
+  const [manualSubject, setManualSubject] = useState<string>("");
+  const [manualBody, setManualBody] = useState<string>("");
+  const [manualPhotoFile, setManualPhotoFile] = useState<File | null>(null);
+  const [manualPhotoUrl, setManualPhotoUrl] = useState<string>("");
+  const [sendingManual, setSendingManual] = useState(false);
+  const [manualSendResult, setManualSendResult] = useState<string>("");
+  const manualFileRef = useRef<HTMLInputElement>(null);
+
+  // Template Editor state
+  const [selectedTplKey, setSelectedTplKey] = useState<TemplateKey>("welcome");
+  const [tplSubject, setTplSubject] = useState("");
+  const [tplBodyHtml, setTplBodyHtml] = useState("");
+  const [tplBannerUrl, setTplBannerUrl] = useState("");
+  const [tplBannerFile, setTplBannerFile] = useState<File | null>(null);
+  const [savingTpl, setSavingTpl] = useState(false);
+  const [tplResult, setTplResult] = useState("");
+  const tplFileRef = useRef<HTMLInputElement>(null);
+
+  // Log filter
   const [filterType, setFilterType] = useState<string>("all");
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
-  const [recipientEmail, setRecipientEmail] = useState<string>("");
-  const [customSubject, setCustomSubject] = useState<string>("");
-  const [sending, setSending] = useState(false);
-  const [sendResult, setSendResult] = useState<string>("");
 
-  const filteredLogs = logs.filter((l) => (filterType === "all" ? true : l.status === filterType));
+  const currentTemplate = templates.find((t) => t.key === selectedTplKey) || DEFAULT_TEMPLATES.find((t) => t.key === selectedTplKey);
 
-  const handleSendManual = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!recipientEmail || !selectedTemplate) {
-      alert("Please choose a recipient email and a template.");
-      return;
+  useEffect(() => {
+    if (currentTemplate) {
+      setTplSubject(currentTemplate.subject || "");
+      setTplBodyHtml(currentTemplate.body_html || "");
+      setTplBannerUrl(currentTemplate.banner_url || "/assets/email_welcome_banner.jpg");
     }
-    setSending(true);
-    setSendResult("");
+  }, [selectedTplKey, templates]);
+
+  const handleAttachPhoto = async (file: File | null) => {
+    if (!file) return;
+    setManualPhotoFile(file);
     try {
-      const res = await fetch("/api/communication/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workflow: selectedTemplate,
-          to: recipientEmail,
-          subject: customSubject || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Send failed");
-      setSendResult(`✓ Email queued/sent successfully! Message ID: ${data.messageId || "OK"}`);
-      setRecipientEmail("");
-      setCustomSubject("");
-      onRefresh();
-    } catch (err: any) {
-      setSendResult(`Error: ${err.message}`);
-    } finally {
-      setSending(false);
+      const url = await uploadImage(file);
+      setManualPhotoUrl(url);
+    } catch (e: any) {
+      alert("Failed to upload photo: " + e.message);
     }
   };
+
+  const handleSendManualEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualRecipient) {
+      alert("Please enter or select a recipient email.");
+      return;
+    }
+    setSendingManual(true);
+    setManualSendResult("");
+    try {
+      let finalHtml = manualBody || `<p style="font-family: Arial, sans-serif; line-height: 1.6; color: #f5f5f5;">Hello,</p><p style="font-family: Arial, sans-serif; line-height: 1.6; color: #cccccc;">Thank you for contacting DE GREAT JAPHET. We are pleased to provide your requested architectural finishing quote.</p>`;
+
+      if (manualPhotoUrl) {
+        finalHtml = `<div style="max-width:600px; margin:0 auto; background:#111; color:#fff; padding:20px; border-radius:12px;"><img src="${manualPhotoUrl}" alt="Attachment Photo" style="width:100%; max-height:300px; object-fit:cover; border-radius:8px; margin-bottom:16px; display:block;" />${finalHtml}</div>`;
+      } else {
+        finalHtml = `<div style="max-width:600px; margin:0 auto; background:#111; color:#fff; padding:20px; border-radius:12px;">${finalHtml}</div>`;
+      }
+
+      const res = await CommunicationEngine.send({
+        templateKey: manualTemplateKey,
+        recipientEmail: manualRecipient,
+        metadata: {
+          customSubject: manualSubject || "Direct Communication from DE GREAT JAPHET",
+          customBodyHtml: finalHtml,
+        },
+      });
+
+      if (res.success) {
+        setManualSendResult(`✓ Email sent successfully via SendGrid! Message ID: ${res.messageId || "OK"}`);
+        setManualRecipient("");
+        setManualSubject("");
+        setManualBody("");
+        setManualPhotoFile(null);
+        setManualPhotoUrl("");
+        onRefresh();
+      } else {
+        throw new Error(res.error || "SendGrid email delivery failed");
+      }
+    } catch (err: any) {
+      setManualSendResult(`Error: ${err.message}`);
+    } fontally {
+      setSendingManual(false);
+    }
+  };
+
+  const handleSaveTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingTpl(true);
+    setTplResult("");
+    try {
+      let banner = tplBannerUrl;
+      if (tplBannerFile) {
+        banner = await uploadImage(tplBannerFile);
+      }
+      const ok = await CommunicationEngine.updateTemplate(selectedTplKey, {
+        name: currentTemplate?.name || selectedTplKey,
+        subject: tplSubject,
+        body_html: tplBodyHtml,
+        banner_url: banner,
+      });
+
+      if (ok) {
+        setTplResult("✓ Email Template updated and saved to database successfully!");
+        setTplBannerFile(null);
+        onRefresh();
+      } else {
+        throw new Error("Failed to update template in database");
+      }
+    } catch (err: any) {
+      setTplResult("Error: " + err.message);
+    } finally {
+      setSavingTpl(false);
+    }
+  };
+
+  const filteredLogs = logs.filter((l) => (filterType === "all" ? true : l.status === filterType));
 
   return (
     <div className="space-y-6">
       <div className="border rounded-xl p-6 bg-card space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Mail className="text-gold" size={20} /> Customer Communication Operating System
-          </h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            Centralized email delivery engine connected to SendGrid. Works across automated triggers and manual campaigns.
-          </p>
-        </div>
-
-        <form onSubmit={handleSendManual} className="border rounded-lg p-4 bg-muted/20 space-y-4">
-          <h3 className="text-sm font-semibold flex items-center gap-1.5">
-            <Send size={15} className="text-gold" /> Send Manual / Test Campaign
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <select
-              value={selectedTemplate}
-              onChange={(e) => setSelectedTemplate(e.target.value)}
-              className="border rounded px-3 py-2 text-xs bg-background"
-              required
-            >
-              <option value="">Select Workflow / Template *</option>
-              <option value="welcome">Welcome Email</option>
-              <option value="collection_reminder_24h">Collection Reminder (24h)</option>
-              <option value="abandoned_collection_72h">Abandoned Collection (72h)</option>
-              <option value="monthly_newsletter">Monthly Newsletter</option>
-              <option value="holiday_campaign">Holiday Campaign</option>
-              <option value="system_notification">System Notification</option>
-            </select>
-
-            <input
-              type="email"
-              placeholder="Recipient Email *"
-              value={recipientEmail}
-              onChange={(e) => setRecipientEmail(e.target.value)}
-              className="border rounded px-3 py-2 text-xs bg-background"
-              required
-            />
-
-            <input
-              type="text"
-              placeholder="Custom Subject (Optional)"
-              value={customSubject}
-              onChange={(e) => setCustomSubject(e.target.value)}
-              className="border rounded px-3 py-2 text-xs bg-background"
-            />
+        <div className="flex items-center justify-between border-b pb-4">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Mail className="text-gold" size={20} /> Customer Communication Engine
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Send manual rich emails with photo attachments, edit dynamic templates, and monitor SendGrid delivery history.
+            </p>
           </div>
-
-          <div className="flex items-center justify-between">
-            {sendResult ? (
-              <p className={`text-xs font-medium ${sendResult.startsWith("✓") ? "text-emerald-500" : "text-red-500"}`}>
-                {sendResult}
-              </p>
-            ) : <span />}
+          <div className="flex gap-2">
             <button
-              type="submit"
-              disabled={sending}
-              className="px-4 py-2 bg-gradient-gold text-[var(--cta-foreground)] font-semibold rounded text-xs disabled:opacity-50 shadow-gold"
+              onClick={() => setCommSubTab("manual")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                commSubTab === "manual" ? "bg-gold text-black shadow-gold" : "bg-muted text-muted-foreground hover:text-foreground"
+              }`}
             >
-              {sending ? "Sending via SendGrid..." : "Send Email Now"}
+              <Send size={14} /> Send Manual Email
+            </button>
+            <button
+              onClick={() => setCommSubTab("templates")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                commSubTab === "templates" ? "bg-gold text-black shadow-gold" : "bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Edit size={14} /> Edit Templates
+            </button>
+            <button
+              onClick={() => setCommSubTab("logs")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                commSubTab === "logs" ? "bg-gold text-black shadow-gold" : "bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <HistoryIcon size={14} /> Delivery Logs
             </button>
           </div>
-        </form>
-      </div>
+        </div>
 
-      <div className="border rounded-xl p-6 bg-card space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <HistoryIcon size={16} className="text-gold" /> Communication Delivery Logs
-          </h3>
-          <div className="flex gap-2">
-            {(["all", "sent", "failed", "pending"] as const).map((s) => (
+        {/* SUB-TAB 1: MANUAL EMAIL SENDING WITH PHOTO ATTACHMENT */}
+        {commSubTab === "manual" && (
+          <form onSubmit={handleSendManualEmail} className="space-y-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2 text-gold">
+              <Send size={16} /> Send Custom Manual Email / Campaign (Text + Photo Upload)
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1">Select Customer / Recipient *</label>
+                <select
+                  value={customers.some(c => c.email === manualRecipient) ? manualRecipient : "custom"}
+                  onChange={(e) => {
+                    if (e.target.value !== "custom") setManualRecipient(e.target.value);
+                  }}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background mb-2"
+                >
+                  <option value="custom">— Select Registered Customer —</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.email}>
+                      {c.full_name ? `${c.full_name} (${c.email})` : c.email}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="email"
+                  placeholder="Or enter recipient email address manually *"
+                  value={manualRecipient}
+                  onChange={(e) => setManualRecipient(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1">Email Subject Line *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Official Quote & Catalog Presentation — DE GREAT JAPHET"
+                  value={manualSubject}
+                  onChange={(e) => setManualSubject(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1">Email Message Body (Text or HTML)</label>
+              <textarea
+                rows={5}
+                placeholder="Type your message content here..."
+                value={manualBody}
+                onChange={(e) => setManualBody(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-xs bg-background font-sans"
+              />
+            </div>
+
+            {/* Photo / Image Upload section for manual email */}
+            <div className="border border-dashed border-border rounded-lg p-4 bg-muted/20 space-y-2">
+              <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <ImageIcon size={15} className="text-gold" /> Upload Photo / Image Attachment for Email
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => openSystemImagePicker(handleAttachPhoto, manualFileRef.current)}
+                  className="px-4 py-2 border rounded-md text-xs hover:bg-muted transition flex items-center gap-1.5"
+                >
+                  <Upload size={14} /> Choose Photo
+                </button>
+                <input
+                  ref={manualFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleAttachPhoto(e.target.files?.[0] || null)}
+                />
+                {manualPhotoUrl ? (
+                  <div className="flex items-center gap-2">
+                    <img src={manualPhotoUrl} alt="Attachment" className="w-10 h-10 object-cover rounded border" />
+                    <span className="text-xs text-emerald-400 font-medium">✓ Photo attached!</span>
+                    <button
+                      type="button"
+                      onClick={() => { setManualPhotoFile(null); setManualPhotoUrl(""); }}
+                      className="text-xs text-red-400 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">No photo selected.</span>
+                )}
+              </div>
+            </div>
+
+            {/* Live Preview Box */}
+            <div className="border rounded-lg p-4 bg-black/40 space-y-2">
+              <p className="text-xs font-semibold text-gold flex items-center gap-1.5">
+                <Eye size={14} /> Outgoing Email Live Visual Preview
+              </p>
+              <div className="border border-border/60 rounded p-4 bg-[#111] text-xs text-foreground space-y-3">
+                <p className="font-semibold text-gold">Subject: {manualSubject || "Direct Communication from DE GREAT JAPHET"}</p>
+                <div className="border-t border-border/40 pt-3">
+                  {manualPhotoUrl && (
+                    <img src={manualPhotoUrl} alt="Attached Photo" className="w-full max-h-48 object-cover rounded mb-3" />
+                  )}
+                  <p>{manualBody || "Your email message body text will appear here."}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              {manualSendResult ? (
+                <p className={`text-xs font-medium ${manualSendResult.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
+                  {manualSendResult}
+                </p>
+              ) : <span />}
               <button
-                key={s}
-                onClick={() => setFilterType(s)}
-                className={`px-3 py-1 rounded text-xs capitalize border ${
-                  filterType === s ? "bg-gold/20 text-gold border-gold" : "border-border text-muted-foreground"
-                }`}
+                type="submit"
+                disabled={sendingManual}
+                className="px-6 py-2.5 bg-gradient-gold text-[var(--cta-foreground)] font-semibold rounded-lg text-xs shadow-gold hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
               >
-                {s}
+                <Send size={15} /> {sendingManual ? "Sending via SendGrid..." : "Send Email Now"}
               </button>
-            ))}
-          </div>
-        </div>
+            </div>
+          </form>
+        )}
 
-        <div className="border rounded-lg overflow-hidden">
-          <table className="w-full text-xs text-left">
-            <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
-              <tr>
-                <th className="p-3">Timestamp</th>
-                <th className="p-3">Campaign / Workflow</th>
-                <th className="p-3">Recipient</th>
-                <th className="p-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-6 text-center text-muted-foreground">
-                    No communication logs found for filter '{filterType}'.
-                  </td>
-                </tr>
-              ) : (
-                filteredLogs.slice(0, 30).map((l) => (
-                  <tr key={l.id} className="hover:bg-muted/20">
-                    <td className="p-3 text-muted-foreground">{new Date(l.created_at).toLocaleString()}</td>
-                    <td className="p-3 font-medium text-foreground">{l.campaign_id}</td>
-                    <td className="p-3 text-muted-foreground">{l.email}</td>
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          l.status === "sent" || l.status === "delivered"
-                            ? "bg-emerald-500/20 text-emerald-400"
-                            : l.status === "failed"
-                            ? "bg-red-500/20 text-red-400"
-                            : "bg-amber-500/20 text-amber-400"
-                        }`}
-                      >
-                        {l.status}
-                      </span>
-                    </td>
+        {/* SUB-TAB 2: TEMPLATE EDITOR & BANNER MANAGER */}
+        {commSubTab === "templates" && (
+          <form onSubmit={handleSaveTemplate} className="space-y-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2 text-gold">
+              <Edit size={16} /> Edit Automated Email Templates & Customize Pictures
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1">Select Email Template to Edit *</label>
+                <select
+                  value={selectedTplKey}
+                  onChange={(e) => setSelectedTplKey(e.target.value as TemplateKey)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background font-medium"
+                >
+                  <option value="welcome">Welcome Email</option>
+                  <option value="collection_reminder">Collection Reminder (24h)</option>
+                  <option value="abandoned_collection">Abandoned Collection (72h)</option>
+                  <option value="monthly_newsletter">Monthly Newsletter</option>
+                  <option value="holiday_campaign">Holiday Campaign</option>
+                  <option value="system_notification">System Notification</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold mb-1">Template Subject Line *</label>
+                <input
+                  type="text"
+                  value={tplSubject}
+                  onChange={(e) => setTplSubject(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-xs bg-background"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Template Banner / Picture Upload */}
+            <div className="border border-border/80 rounded-lg p-4 bg-muted/20 space-y-3">
+              <label className="block text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <ImageIcon size={15} className="text-gold" /> Template Picture / Banner Header
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTplBannerUrl("/assets/email_welcome_banner.jpg")}
+                  className={`p-2 border rounded-md text-xs text-left ${tplBannerUrl === "/assets/email_welcome_banner.jpg" ? "border-gold text-gold" : ""}`}
+                >
+                  Use Welcome Banner Placeholder
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTplBannerUrl("/assets/email_collection_banner.jpg")}
+                  className={`p-2 border rounded-md text-xs text-left ${tplBannerUrl === "/assets/email_collection_banner.jpg" ? "border-gold text-gold" : ""}`}
+                >
+                  Use Collection Banner Placeholder
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTplBannerUrl("/assets/email_newsletter_banner.jpg")}
+                  className={`p-2 border rounded-md text-xs text-left ${tplBannerUrl === "/assets/email_newsletter_banner.jpg" ? "border-gold text-gold" : ""}`}
+                >
+                  Use Newsletter Banner Placeholder
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => openSystemImagePicker(setTplBannerFile, tplFileRef.current)}
+                  className="px-4 py-2 border rounded-md text-xs hover:bg-muted transition flex items-center gap-1.5"
+                >
+                  <Upload size={14} /> Upload Custom Banner Picture
+                </button>
+                <input
+                  ref={tplFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => setTplBannerFile(e.target.files?.[0] || null)}
+                />
+                {tplBannerFile ? (
+                  <span className="text-xs text-emerald-400 font-medium">Selected: {tplBannerFile.name}</span>
+                ) : (
+                  <span className="text-xs text-muted-foreground truncate max-w-xs">Current Banner URL: {tplBannerUrl}</span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold">Template HTML Body Content</label>
+                <span className="text-[10px] text-gold font-mono">Variables: {"{{customer_name}}, {{shop_url}}, {{banner_url}}"}</span>
+              </div>
+              <textarea
+                rows={8}
+                value={tplBodyHtml}
+                onChange={(e) => setTplBodyHtml(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-xs bg-background font-mono leading-relaxed"
+                required
+              />
+            </div>
+
+            {/* Template Live Visual Preview */}
+            <div className="border rounded-lg p-4 bg-black/40 space-y-2">
+              <p className="text-xs font-semibold text-gold flex items-center gap-1.5">
+                <Eye size={14} /> Template Live Rendered Visual Preview
+              </p>
+              <div className="border border-border/60 rounded p-4 bg-[#111] text-xs text-foreground overflow-x-auto">
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: CommunicationEngine.interpolate(tplBodyHtml, {
+                      customer_name: "Valued Customer",
+                      banner_url: tplBannerFile ? URL.createObjectURL(tplBannerFile) : tplBannerUrl,
+                    }),
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              {tplResult ? (
+                <p className={`text-xs font-medium ${tplResult.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
+                  {tplResult}
+                </p>
+              ) : <span />}
+              <button
+                type="submit"
+                disabled={savingTpl}
+                className="px-6 py-2.5 bg-gradient-gold text-[var(--cta-foreground)] font-semibold rounded-lg text-xs shadow-gold hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+              >
+                <Save size={15} /> {savingTpl ? "Saving Template..." : "Save Template Changes"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* SUB-TAB 3: DELIVERY HISTORY & LOGS */}
+        {commSubTab === "logs" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <HistoryIcon size={16} className="text-gold" /> Delivery Logs History
+              </h3>
+              <div className="flex gap-2">
+                {(["all", "sent", "failed", "pending"] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setFilterType(s)}
+                    className={`px-3 py-1 rounded text-xs capitalize border ${
+                      filterType === s ? "bg-gold/20 text-gold border-gold" : "border-border text-muted-foreground"
+                    }`}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
+                  <tr>
+                    <th className="p-3">Timestamp</th>
+                    <th className="p-3">Campaign / Workflow</th>
+                    <th className="p-3">Recipient</th>
+                    <th className="p-3">Subject</th>
+                    <th className="p-3">Status</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {filteredLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                        No delivery logs found for filter '{filterType}'.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredLogs.slice(0, 50).map((l) => (
+                      <tr key={l.id} className="hover:bg-muted/20">
+                        <td className="p-3 text-muted-foreground">{new Date(l.created_at).toLocaleString()}</td>
+                        <td className="p-3 font-medium text-foreground">{l.template_key || l.campaign_id}</td>
+                        <td className="p-3 text-muted-foreground">{l.recipient_email}</td>
+                        <td className="p-3 text-foreground font-medium max-w-xs truncate">{l.subject}</td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              l.status === "sent" || l.status === "delivered"
+                                ? "bg-emerald-500/20 text-emerald-400"
+                                : l.status === "failed"
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-amber-500/20 text-amber-400"
+                            }`}
+                          >
+                            {l.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1202,30 +1403,59 @@ function OrdersTab({ orders }: { orders: Order[] }) {
 }
 
 function CustomersTab({ customers, logs }: { customers: Customer[]; logs: ActivityLog[] }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const filtered = customers.filter(
+    (c) =>
+      c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.phone || "").includes(searchQuery)
+  );
+
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Registered Customers</h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <UserCheck className="text-gold" size={20} /> Registered Customers ({customers.length})
+          </h2>
+          <p className="text-xs text-muted-foreground">All authenticated users who signed up or placed enquiries.</p>
+        </div>
+        <input
+          type="text"
+          placeholder="Filter customers..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="border rounded px-3 py-1.5 text-xs bg-background w-64"
+        />
+      </div>
+
       <div className="border rounded-xl overflow-hidden bg-card">
         <table className="w-full text-xs text-left">
           <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
             <tr>
               <th className="p-3">Full Name</th>
-              <th className="p-3">Email</th>
+              <th className="p-3">Email Address</th>
               <th className="p-3">Phone</th>
-              <th className="p-3">Provider</th>
+              <th className="p-3">Auth Provider</th>
+              <th className="p-3">User ID</th>
               <th className="p-3">Joined Date</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40">
-            {customers.map((c) => (
-              <tr key={c.id} className="hover:bg-muted/20">
-                <td className="p-3 font-medium text-foreground">{c.full_name || "—"}</td>
-                <td className="p-3 text-muted-foreground">{c.email}</td>
-                <td className="p-3 text-muted-foreground">{c.phone || "—"}</td>
-                <td className="p-3 capitalize">{c.provider || "email"}</td>
-                <td className="p-3 text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
-              </tr>
-            ))}
+            {filtered.length === 0 ? (
+              <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No customers found</td></tr>
+            ) : (
+              filtered.map((c) => (
+                <tr key={c.id} className="hover:bg-muted/20">
+                  <td className="p-3 font-medium text-foreground">{c.full_name || "—"}</td>
+                  <td className="p-3 text-gold font-medium">{c.email}</td>
+                  <td className="p-3 text-muted-foreground">{c.phone || "—"}</td>
+                  <td className="p-3 capitalize text-muted-foreground">{c.provider || "email"}</td>
+                  <td className="p-3 font-mono text-[10px] text-muted-foreground">{c.user_id || c.id}</td>
+                  <td className="p-3 text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -1234,26 +1464,133 @@ function CustomersTab({ customers, logs }: { customers: Customer[]; logs: Activi
 }
 
 function UsersTab({ roles, customers, onChanged }: { roles: UserRole[]; customers: Customer[]; onChanged: () => void }) {
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("customer");
+  const [statusMsg, setStatusMsg] = useState<string>("");
+  const [saving, setSaving] = useState<boolean>(false);
+
+  // Merge registered customers with existing user roles so ALL signed in users appear
+  const userMap = new Map<string, { userId: string; email: string; name: string; currentRole: string }>();
+
+  // Add all from customers table
+  customers.forEach((c) => {
+    const uid = c.user_id || c.id;
+    const r = roles.find((role) => role.user_id === uid || role.email === c.email);
+    userMap.set(uid, {
+      userId: uid,
+      email: c.email,
+      name: c.full_name || c.email.split("@")[0],
+      currentRole: r?.role || "customer",
+    });
+  });
+
+  // Add any additional from roles table
+  roles.forEach((r) => {
+    if (!userMap.has(r.user_id)) {
+      userMap.set(r.user_id, {
+        userId: r.user_id,
+        email: r.email || "—",
+        name: r.email ? r.email.split("@")[0] : "System User",
+        currentRole: r.role,
+      });
+    }
+  });
+
+  const allUsersList = Array.from(userMap.values());
+
+  const handleSaveRole = async (userId: string, email: string, roleToAssign: string) => {
+    setSaving(true);
+    setStatusMsg("");
+    try {
+      const { error } = await supabase.from("user_roles").upsert({
+        user_id: userId,
+        email: email,
+        role: roleToAssign,
+      }, { onConflict: "user_id" });
+
+      if (error) throw error;
+      setStatusMsg(`✓ Role "${roleToAssign.toUpperCase()}" assigned to ${email} successfully!`);
+      setEditingUserId(null);
+      onChanged();
+    } catch (e: any) {
+      setStatusMsg("Error: " + (e.message || "Failed to update user role"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">User Role Management</h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Shield className="text-gold" size={20} /> User & Role Management ({allUsersList.length})
+          </h2>
+          <p className="text-xs text-muted-foreground">Assign or modify permissions for all registered system users.</p>
+        </div>
+        {statusMsg && (
+          <p className={`text-xs font-medium ${statusMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
+            {statusMsg}
+          </p>
+        )}
+      </div>
+
       <div className="border rounded-xl overflow-hidden bg-card">
         <table className="w-full text-xs text-left">
           <thead className="bg-muted/50 border-b border-border uppercase tracking-wider text-[10px] text-muted-foreground">
             <tr>
+              <th className="p-3">User Name</th>
+              <th className="p-3">Email Address</th>
               <th className="p-3">User ID</th>
-              <th className="p-3">Email</th>
-              <th className="p-3">Assigned Role</th>
-              <th className="p-3">Created At</th>
+              <th className="p-3">Assigned Permission Role</th>
+              <th className="p-3 text-right">Assign Role</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40">
-            {roles.map((r) => (
-              <tr key={r.id} className="hover:bg-muted/20">
-                <td className="p-3 text-muted-foreground font-mono text-[10px]">{r.user_id}</td>
-                <td className="p-3 font-medium text-foreground">{r.email || "—"}</td>
-                <td className="p-3 font-semibold text-gold uppercase">{r.role}</td>
-                <td className="p-3 text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</td>
+            {allUsersList.map((u) => (
+              <tr key={u.userId} className="hover:bg-muted/20">
+                <td className="p-3 font-medium text-foreground">{u.name}</td>
+                <td className="p-3 text-muted-foreground">{u.email}</td>
+                <td className="p-3 font-mono text-[10px] text-muted-foreground">{u.userId}</td>
+                <td className="p-3">
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      u.currentRole === "super_admin" || u.currentRole === "admin"
+                        ? "bg-amber-500/20 text-gold border border-gold/40"
+                        : u.currentRole === "staff"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {u.currentRole}
+                  </span>
+                </td>
+                <td className="p-3 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <select
+                      value={editingUserId === u.userId ? selectedRole : u.currentRole}
+                      onChange={(e) => {
+                        setEditingUserId(u.userId);
+                        setSelectedRole(e.target.value);
+                      }}
+                      className="border rounded px-2 py-1 text-xs bg-background font-medium"
+                    >
+                      <option value="customer">Customer</option>
+                      <option value="user">Standard User</option>
+                      <option value="staff">Staff Member</option>
+                      <option value="admin">Admin</option>
+                      <option value="super_admin">Super Admin</option>
+                    </select>
+
+                    <button
+                      onClick={() => handleSaveRole(u.userId, u.email, editingUserId === u.userId ? selectedRole : u.currentRole)}
+                      disabled={saving}
+                      className="px-3 py-1 bg-gold text-black font-semibold rounded text-[11px] hover:opacity-90 transition shadow-gold disabled:opacity-50"
+                    >
+                      Save Role
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
