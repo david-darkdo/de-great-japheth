@@ -1,3 +1,4 @@
+// Production Build Trigger: Admin User Role Editing & Customer Communication Suite
 import { generateProductIntelligence } from "@/lib/productIntelligence";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -816,7 +817,7 @@ function CommunicationCenterTab({
       }
     } catch (err: any) {
       setManualSendResult(`Error: ${err.message}`);
-    } fontally {
+    } finally {
       setSendingManual(false);
     }
   };
