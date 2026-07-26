@@ -26,8 +26,12 @@ export interface EmailTemplate {
   key: TemplateKey;
   name: string;
   subject: string;
+  title?: string;
   body_html: string;
   body_text?: string;
+  button_text?: string;
+  button_link?: string;
+  footer_text?: string;
   banner_url?: string;
   variables?: string[];
   updated_at?: string;
@@ -52,42 +56,78 @@ export const DEFAULT_TEMPLATES: EmailTemplate[] = [
     key: "welcome",
     name: "Welcome Email",
     subject: "Welcome to DE GREAT JAPHET — Luxury Building Finishing",
+    title: "Welcome to DE GREAT JAPHET",
     banner_url: "/assets/email_welcome_banner.jpg",
-    body_html: `<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #111111; color: #f5f5f5; padding: 24px; border-radius: 12px; border: 1px solid #333333;"><img src="{{banner_url}}" alt="DE GREAT JAPHET Welcome" style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; display: block;" /><h2 style="color: #d4af37; margin-top: 0;">Welcome to De Great Japhet, {{customer_name}}!</h2><p style="line-height: 1.6; color: #cccccc;">Thank you for creating an account with <strong>DE GREAT JAPHET</strong> — your premier supplier and installer of luxury tiles, armored security doors, sanitary ware, and architectural finishing in Nigeria.</p><p style="line-height: 1.6; color: #cccccc;">Browse our catalog and create your custom project collection to receive direct estimates and WhatsApp consultation.</p><div style="text-align: center; margin: 28px 0;"><a href="{{shop_url}}" style="background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #000000; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: bold; display: inline-block;">Explore Showroom Catalog</a></div><p style="font-size: 12px; color: #777777; text-align: center;">DE GREAT JAPHET • Quality & Luxury Architectural Finishing</p></div>`
+    button_text: "Explore Showroom Catalog",
+    button_link: "/showroom",
+    footer_text: "DE GREAT JAPHET • Quality & Luxury Architectural Finishing",
+    body_html: `<p style="line-height: 1.6; color: #cccccc;">Thank you for creating an account with <strong>DE GREAT JAPHET</strong> — your premier supplier and installer of luxury tiles, armored security doors, sanitary ware, and architectural finishing in Nigeria.</p><p style="line-height: 1.6; color: #cccccc;">Browse our catalog and create your custom project collection to receive direct estimates and WhatsApp consultation.</p>`
   },
   {
     key: "collection_reminder",
     name: "Collection Reminder (24h)",
     subject: "Your Selected Items Are Saved — Request Your Quote",
+    title: "Your Project Collection is Saved",
     banner_url: "/assets/email_collection_banner.jpg",
-    body_html: `<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #111111; color: #f5f5f5; padding: 24px; border-radius: 12px; border: 1px solid #333333;"><img src="{{banner_url}}" alt="Project Collection" style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; display: block;" /><h2 style="color: #d4af37; margin-top: 0;">Hello {{customer_name}},</h2><p style="line-height: 1.6; color: #cccccc;">You recently saved building materials to your project collection. Our management team is ready to verify inventory, calculate logistics, and issue your official quote.</p><div style="text-align: center; margin: 28px 0;"><a href="{{collection_url}}" style="background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #000000; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: bold; display: inline-block;">View Saved Collection & Request Quote</a></div></div>`
+    button_text: "View Saved Collection & Get Quote",
+    button_link: "/cart",
+    footer_text: "DE GREAT JAPHET Customer Support",
+    body_html: `<p style="line-height: 1.6; color: #cccccc;">You recently saved building materials to your project collection. Our management team is ready to verify inventory, calculate logistics, and issue your official quote.</p>`
   },
   {
     key: "abandoned_collection",
     name: "Abandoned Collection (72h)",
     subject: "Still Planning Your Build? Direct Support from Showroom Manager",
+    title: "Complete Your Architectural Finishing",
     banner_url: "/assets/email_collection_banner.jpg",
-    body_html: `<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #111111; color: #f5f5f5; padding: 24px; border-radius: 12px; border: 1px solid #333333;"><h2 style="color: #d4af37;">Dear {{customer_name}},</h2><p style="color: #cccccc; line-height: 1.6;">Don't let your architectural vision wait. Speak directly with our head of sales on WhatsApp to review your tile measurements or custom door specifications.</p><div style="text-align: center; margin: 24px 0;"><a href="{{shop_url}}" style="background: #25D366; color: #ffffff; padding: 12px 26px; border-radius: 6px; font-weight: bold; text-decoration: none; display: inline-block;">Chat with Showroom Manager</a></div></div>`
+    button_text: "Chat with Showroom Manager",
+    button_link: "/contact",
+    footer_text: "DE GREAT JAPHET Executive Sales Team",
+    body_html: `<p style="color: #cccccc; line-height: 1.6;">Don't let your architectural vision wait. Speak directly with our head of sales on WhatsApp to review your tile measurements or custom door specifications.</p>`
   },
   {
     key: "monthly_newsletter",
     name: "Monthly Newsletter",
     subject: "DE GREAT JAPHET Monthly — New Arrivals & Architectural Trends",
+    title: "Exclusive Monthly Catalog Updates",
     banner_url: "/assets/email_newsletter_banner.jpg",
-    body_html: `<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #111111; color: #f5f5f5; padding: 24px; border-radius: 12px; border: 1px solid #333333;"><img src="{{banner_url}}" alt="Monthly Newsletter" style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; display: block;" /><h2 style="color: #d4af37;">Exclusive Monthly Catalog Updates</h2><p style="color: #cccccc; line-height: 1.6;">Discover our newest arrivals in Spanish ceramic tiles, Turkish armored security doors, and high-end bathroom fixtures for modern residential and commercial builds.</p><div style="text-align: center; margin: 24px 0;"><a href="{{shop_url}}" style="background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #000000; padding: 12px 28px; border-radius: 6px; font-weight: bold; text-decoration: none; display: inline-block;">Browse New Arrivals</a></div></div>`
+    button_text: "Browse New Arrivals",
+    button_link: "/showroom",
+    footer_text: "DE GREAT JAPHET Monthly Digest",
+    body_html: `<p style="color: #cccccc; line-height: 1.6;">Discover our newest arrivals in Spanish ceramic tiles, Turkish armored security doors, and high-end bathroom fixtures for modern residential and commercial builds.</p>`
   },
   {
     key: "holiday_campaign",
     name: "Holiday Special Campaign",
     subject: "Exclusive Holiday Offers on Luxury Building Finishing",
+    title: "Season's Greetings from DE GREAT JAPHET!",
     banner_url: "/assets/email_welcome_banner.jpg",
-    body_html: `<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #111111; color: #f5f5f5; padding: 24px; border-radius: 12px; border: 1px solid #333333;"><h2 style="color: #d4af37;">Season's Greetings from DE GREAT JAPHET!</h2><p style="color: #cccccc; line-height: 1.6;">Celebrate the season with special promotional rates on complete building finishing packages, security doors, and imported tiles.</p><div style="text-align: center; margin: 24px 0;"><a href="{{shop_url}}" style="background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #000000; padding: 12px 28px; border-radius: 6px; font-weight: bold; text-decoration: none; display: inline-block;">Claim Holiday Discount</a></div></div>`
+    button_text: "Claim Holiday Discount",
+    button_link: "/showroom",
+    footer_text: "DE GREAT JAPHET Holiday Special",
+    body_html: `<p style="color: #cccccc; line-height: 1.6;">Celebrate the season with special promotional rates on complete building finishing packages, security doors, and imported tiles.</p>`
+  },
+  {
+    key: "manual_campaign",
+    name: "Manual Campaign",
+    subject: "Direct Communication from DE GREAT JAPHET",
+    title: "Special Update from Management",
+    banner_url: "/assets/email_welcome_banner.jpg",
+    button_text: "Visit DE GREAT JAPHET",
+    button_link: "/showroom",
+    footer_text: "DE GREAT JAPHET Customer Operations",
+    body_html: `<p style="color: #cccccc; line-height: 1.6;">Thank you for choosing DE GREAT JAPHET for your architectural finishing needs.</p>`
   },
   {
     key: "system_notification",
     name: "System Notification",
     subject: "Update Regarding Your DE GREAT JAPHET Order",
-    body_html: `<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #111111; color: #f5f5f5; padding: 24px; border-radius: 12px; border: 1px solid #333333;"><h2 style="color: #d4af37;">Important Order Notice</h2><p style="color: #cccccc; line-height: 1.6;">Hello {{customer_name}}, {{message_content}}</p><p style="font-size: 12px; color: #888888; text-align: center;">DE GREAT JAPHET Customer Operations</p></div>`
+    title: "Important System Notification",
+    banner_url: "/assets/email_welcome_banner.jpg",
+    button_text: "View Order Details",
+    button_link: "/orders",
+    footer_text: "DE GREAT JAPHET Customer Operations",
+    body_html: `<p style="color: #cccccc; line-height: 1.6;">Hello {{customer_name}}, {{message_content}}</p>`
   }
 ];
 
@@ -115,7 +155,11 @@ export class CommunicationEngine {
       key,
       name: updates.name,
       subject: updates.subject,
+      title: updates.title,
       body_html: updates.body_html,
+      button_text: updates.button_text,
+      button_link: updates.button_link,
+      footer_text: updates.footer_text,
       banner_url: updates.banner_url,
       updated_at: new Date().toISOString(),
     }, { onConflict: "key" });
@@ -143,11 +187,26 @@ export class CommunicationEngine {
     return result;
   }
 
+  static renderTemplateHtml(template: Partial<EmailTemplate>, vars: Record<string, string> = {}): string {
+    const bannerUrl = template.banner_url || "/assets/email_welcome_banner.jpg";
+    const title = template.title || "DE GREAT JAPHET Notification";
+    const bodyHtml = template.body_html || "";
+    const buttonText = template.button_text || "";
+    const buttonLink = template.button_link ? getPublicUrl(template.button_link) : getPublicUrl("/showroom");
+    const footerText = template.footer_text || "DE GREAT JAPHET • Quality & Luxury Architectural Finishing";
+
+    const bannerBlock = bannerUrl ? `<img src="${bannerUrl}" alt="Header Banner" style="width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; margin-bottom: 20px; display: block;" />` : "";
+    const buttonBlock = buttonText ? `<div style="text-align: center; margin: 28px 0;"><a href="${buttonLink}" style="background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #000000; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: bold; display: inline-block;">${buttonText}</a></div>` : "";
+
+    const rawFullHtml = `<div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #111111; color: #f5f5f5; padding: 24px; border-radius: 12px; border: 1px solid #333333;">${bannerBlock}<h2 style="color: #d4af37; margin-top: 0;">${title}</h2>${bodyHtml}${buttonBlock}<p style="font-size: 12px; color: #777777; text-align: center; margin-top: 24px;">${footerText}</p></div>`;
+
+    return this.interpolate(rawFullHtml, vars);
+  }
+
   static async send(payload: SendEmailPayload): Promise<{ success: boolean; logId?: string; messageId?: string; error?: string }> {
     try {
       const template = await this.getTemplate(payload.templateKey);
       const rawSubject = payload.metadata?.customSubject || template?.subject || "Notification from DE GREAT JAPHET";
-      const rawBody = payload.metadata?.customBodyHtml || template?.body_html || "<p>Hello {{customer_name}}</p>";
 
       const vars = {
         customer_name: payload.recipientEmail.split("@")[0],
@@ -156,7 +215,13 @@ export class CommunicationEngine {
       };
 
       const finalSubject = this.interpolate(rawSubject, vars);
-      const finalBody = this.interpolate(rawBody, vars);
+      let finalBody = payload.metadata?.customBodyHtml;
+
+      if (!finalBody && template) {
+        finalBody = this.renderTemplateHtml(template, vars);
+      } else if (!finalBody) {
+        finalBody = `<p>Hello {{customer_name}}, thank you for visiting DE GREAT JAPHET.</p>`;
+      }
 
       let sendSuccess = false;
       let errorMsg: string | undefined;
