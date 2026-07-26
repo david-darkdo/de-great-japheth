@@ -12,6 +12,35 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+async function syncUserToCustomerTable(user: any) {
+  if (!user || !user.email) return;
+  const fullName = user.user_metadata?.full_name || user.email.split("@")[0];
+  const phone = user.user_metadata?.phone || null;
+  const provider = user.app_metadata?.provider || "email";
+
+  try {
+    await supabase.from("customers").upsert({
+      user_id: user.id,
+      email: user.email,
+      full_name: fullName,
+      phone: phone,
+      provider: provider,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "email" });
+
+    const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
+    if (!roleData) {
+      await supabase.from("user_roles").insert({
+        user_id: user.id,
+        email: user.email,
+        role: "customer",
+      });
+    }
+  } catch (err) {
+    console.warn("[Auth Sync] Exception syncing user:", err);
+  }
+}
+
 function AuthPage() {
   const { redirect, mode: initialMode } = Route.useSearch();
   const navigate = useNavigate();
@@ -25,11 +54,20 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: redirect as any });
+      if (data.session?.user) {
+        syncUserToCustomerTable(data.session.user);
+        navigate({ to: redirect as any });
+      }
     });
   }, [navigate, redirect]);
 
-  const continueAfterAuth = () => navigate({ to: redirect as any });
+  const continueAfterAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await syncUserToCustomerTable(session.user);
+    }
+    navigate({ to: redirect as any });
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +87,10 @@ function AuthPage() {
         });
         if (error) { setMsg(error.message); return; }
 
+        if (data.user) {
+          await syncUserToCustomerTable(data.user);
+        }
+
         // Trigger automatic Welcome Email via Communication Engine immediately
         CommunicationEngine.triggerWelcome(email, data.user?.id, fullName);
 
@@ -59,11 +101,14 @@ function AuthPage() {
           setMode("signin");
           return;
         }
-        continueAfterAuth();
+        await continueAfterAuth();
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) { setMsg(error.message); return; }
-        continueAfterAuth();
+        if (data.user) {
+          await syncUserToCustomerTable(data.user);
+        }
+        await continueAfterAuth();
       }
     } finally { setBusy(false); }
   };
@@ -99,74 +144,112 @@ function AuthPage() {
             Login or create account to continue sending your selected products to our management team.
           </p>
 
-          <button
-            type="button" onClick={google} disabled={busy}
-            className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-[oklch(0.82_0.14_86/0.3)] bg-background/40 px-4 py-2.5 text-sm font-medium hover:bg-background/60 hover:border-gold transition disabled:opacity-50"
-          >
-            <GoogleIcon /> Continue with Google
-          </button>
-
-          <div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
-            <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <form onSubmit={submit} className="space-y-3">
+          <form onSubmit={submit} className="mt-6 space-y-4">
             {mode === "signup" && (
               <>
-                <Field label="Full Name" value={fullName} onChange={setFullName} placeholder="Jane Doe" required />
-                <Field label="Phone Number" value={phone} onChange={setPhone} placeholder="0801 234 5678" required type="tel" />
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="e.g. Chief Japhet Adewale"
+                    className="w-full px-4 py-3 text-sm rounded-xl border border-border/80 bg-background/60 focus:outline-none focus:border-gold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="e.g. 08012345678"
+                    className="w-full px-4 py-3 text-sm rounded-xl border border-border/80 bg-background/60 focus:outline-none focus:border-gold"
+                  />
+                </div>
               </>
             )}
-            <Field label="Email" value={email} onChange={setEmail} placeholder="you@example.com" required type="email" />
-            <Field label="Password" value={password} onChange={setPassword} placeholder="••••••••" required type="password" />
+
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Email Address</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                className="w-full px-4 py-3 text-sm rounded-xl border border-border/80 bg-background/60 focus:outline-none focus:border-gold"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Password</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 text-sm rounded-xl border border-border/80 bg-background/60 focus:outline-none focus:border-gold"
+              />
+            </div>
+
+            {msg && (
+              <p className={`text-xs text-center font-medium ${msg.includes("created") || msg.includes("Welcome") ? "text-emerald-400" : "text-red-400"}`}>
+                {msg}
+              </p>
+            )}
 
             <button
-              type="submit" disabled={busy}
-              className="btn-gold w-full mt-2 disabled:opacity-50"
+              type="submit"
+              disabled={busy}
+              className="w-full py-3.5 px-4 rounded-xl bg-gradient-gold text-[var(--cta-foreground)] font-semibold text-sm shadow-gold hover:opacity-95 transition disabled:opacity-50"
             >
-              {busy ? "Please wait…" : mode === "signin" ? "Login" : "Create Account"}
+              {busy ? "Processing..." : mode === "signin" ? "Sign In" : "Create Account"}
             </button>
           </form>
 
-          <p className="mt-4 text-center text-xs text-muted-foreground">
+          <div className="relative my-6 text-center text-xs text-muted-foreground">
+            <span className="bg-card px-2 relative z-10">or continue with</span>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"></div></div>
+          </div>
+
+          <button
+            onClick={google}
+            disabled={busy}
+            type="button"
+            className="w-full py-3 px-4 rounded-xl border border-border/80 bg-card/40 hover:bg-card text-xs font-medium flex items-center justify-center gap-2 transition disabled:opacity-50"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+            </svg>
+            Google Sign-In
+          </button>
+
+          <div className="mt-6 text-center text-xs">
             {mode === "signin" ? (
-              <>New to us? <button onClick={() => setMode("signup")} className="text-gold hover:underline">Create account</button></>
+              <p className="text-muted-foreground">
+                Don't have an account?{" "}
+                <button onClick={() => setMode("signup")} className="text-gold hover:underline font-semibold">
+                  Sign up
+                </button>
+              </p>
             ) : (
-              <>Already have an account? <button onClick={() => setMode("signin")} className="text-gold hover:underline">Login</button></>
+              <p className="text-muted-foreground">
+                Already have an account?{" "}
+                <button onClick={() => setMode("signin")} className="text-gold hover:underline font-semibold">
+                  Sign in
+                </button>
+              </p>
             )}
-          </p>
-
-          {msg && <p className="mt-3 text-center text-xs text-destructive">{msg}</p>}
-
-          <p className="mt-6 text-center text-[11px] text-muted-foreground">
-            <Link to="/cart" className="hover:text-gold transition">Back to cart</Link>
-          </p>
+          </div>
         </div>
       </div>
     </SiteLayout>
-  );
-}
-
-function Field({ label, value, onChange, type = "text", required, placeholder }: {
-  label: string; value: string; onChange: (v: string) => void;
-  type?: string; required?: boolean; placeholder?: string;
-}) {
-  return (
-    <label className="block">
-      <span className="text-[11px] uppercase tracking-widest text-muted-foreground">{label}</span>
-      <input
-        type={type} value={value} required={required} placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-lg border border-border bg-background/40 px-3 py-2 text-sm focus:border-gold focus:outline-none transition"
-      />
-    </label>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.4-1.6 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.5 14.6 2.6 12 2.6 6.8 2.6 2.6 6.8 2.6 12s4.2 9.4 9.4 9.4c5.4 0 9-3.8 9-9.2 0-.6-.1-1.1-.2-1.6H12z"/>
-    </svg>
   );
 }
