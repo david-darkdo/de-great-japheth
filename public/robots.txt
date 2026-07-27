@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Block Private & Administrative Pages
+Disallow: /admin
+Disallow: /system-login
+Disallow: /api/
+Disallow: /auth
+
+# Sitemap Location
+Sitemap: https://degreatjaphet.com.ng/sitemap.xml
