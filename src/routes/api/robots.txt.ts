@@ -1,16 +1,9 @@
 import { createAPIFileRoute } from "@tanstack/react-start/api";
-import { getPublicUrl } from "@/lib/url";
+import { generateRobotsTxt } from "@/lib/sitemapGenerator";
 
 export const APIRoute = createAPIFileRoute("/api/robots.txt")({
   GET: () => {
-    const sitemapUrl = getPublicUrl("/api/sitemap.xml");
-    const robotsTxt = `User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /collection/
-
-Sitemap: ${sitemapUrl}`;
-
+    const robotsTxt = generateRobotsTxt();
     return new Response(robotsTxt, {
       status: 200,
       headers: {
