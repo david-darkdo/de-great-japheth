@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES } from "@/lib/categories";
 import { Search, Globe, Tag, Sparkles, Mail, Send, Filter, History as HistoryIcon, LayoutTemplate, BarChart3, CheckCircle, Clock, Zap, UserCheck, Shield, Upload, Image as ImageIcon, Edit, Eye, Save, Trash2, RefreshCw, Users, Layers, UserPlus } from "lucide-react";
 import { CommunicationEngine, EmailTemplate, EmailLog, DEFAULT_TEMPLATES, TemplateKey } from "@/lib/communicationEngine";
+import { DragDropImageUploader } from "@/components/DragDropImageUploader";
 
 export const Route = createFileRoute("/admin")({
   component: AdminDashboard,
@@ -678,32 +679,23 @@ function UploadTab({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
-      <div className="space-y-4 pt-2 border-t">
-        <div>
-          <p className="text-xs font-semibold mb-2">1. Initial Product Image *</p>
-          <button
-            type="button"
-            onClick={() => openSystemImagePicker(setInitialFile, initRef.current)}
-            className="block w-full text-center border-2 border-dashed rounded-lg p-5 cursor-pointer hover:bg-muted text-xs"
-          >
-            {initialFile ? `Selected: ${initialFile.name}` : "Choose Main Product Image"}
-          </button>
-          <input ref={initRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
-            onChange={(e) => setInitialFile(e.target.files?.[0] ?? null)} />
-        </div>
+      <div className="space-y-5 pt-2 border-t">
+        <DragDropImageUploader
+          label="1. Initial Product Image"
+          required
+          file={initialFile}
+          setFile={setInitialFile}
+          placeholderText="Upload main product catalog image (Drag & drop or click to browse)"
+          helperText="Required for showroom display"
+        />
 
-        <div>
-          <p className="text-xs font-semibold mb-2">2. Finished / Installed Image (Optional)</p>
-          <button
-            type="button"
-            onClick={() => openSystemImagePicker(setFinishedFile, finRef.current)}
-            className="block w-full text-center border-2 border-dashed rounded-lg p-5 cursor-pointer hover:bg-muted text-xs"
-          >
-            {finishedFile ? `Selected: ${finishedFile.name}` : "Choose Installed/Finished Image"}
-          </button>
-          <input ref={finRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
-            onChange={(e) => setFinishedFile(e.target.files?.[0] ?? null)} />
-        </div>
+        <DragDropImageUploader
+          label="2. Finished / Installed Image"
+          file={finishedFile}
+          setFile={setFinishedFile}
+          placeholderText="Upload installed/lifestyle photo (Drag & drop or click to browse)"
+          helperText="Optional lifestyle view (Supports manual or AI generation)"
+        />
       </div>
 
       {status && <p className="text-xs text-center font-medium">{status}</p>}
@@ -1494,22 +1486,14 @@ function EditProductModal({
           value={searchTags}
           onChange={(e) => setSearchTags(e.target.value)}
         />
-        {(file ? URL.createObjectURL(file) : imageUrl) && (
-          <img
-            src={file ? URL.createObjectURL(file) : imageUrl}
-            alt="preview"
-            className="w-full max-h-48 object-contain border rounded-md"
-          />
-        )}
-        <button
-          type="button"
-          onClick={() => openSystemImagePicker(setFile, editFileRef.current)}
-          className="block w-full text-center border-2 border-dashed rounded-lg p-3 cursor-pointer hover:bg-muted text-xs"
-        >
-          {file ? `Selected: ${file.name}` : "Replace Image"}
-        </button>
-        <input ref={editFileRef} type="file" accept={IMAGE_PICKER_ACCEPT} className="hidden"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        <DragDropImageUploader
+          label="Product Catalog Image"
+          file={file}
+          setFile={setFile}
+          existingUrl={imageUrl}
+          onRemoveExistingUrl={() => setImageUrl(null)}
+          placeholderText="Drag & drop or click to replace image"
+        />
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="flex-1 border rounded py-2 text-sm">Cancel</button>
           <button type="submit" disabled={busy}
