@@ -1,11 +1,12 @@
 User-agent: *
 Allow: /
 
-# Block Private & Administrative Pages
+# Block Administrative & Internal API Endpoints
 Disallow: /admin
 Disallow: /system-login
 Disallow: /api/
 Disallow: /auth
 
-# Sitemap Location
+# Search Engine Sitemaps
+Sitemap: https://thegreatjapheth.com.ng/sitemap.xml
 Sitemap: https://degreatjaphet.com.ng/sitemap.xml
