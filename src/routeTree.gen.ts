@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SystemLoginRouteImport } from './routes/system-login'
 import { Route as StartProjectRouteImport } from './routes/start-project'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShowroomRouteImport } from './routes/showroom'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -20,15 +22,17 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
+import { Route as FamilySlugRouteImport } from './routes/family.$slug'
+import { Route as CollectionIdRouteImport } from './routes/collection.$id'
 import { Route as CategorySlugRouteImport } from './routes/category.$slug'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload-image'
 import { Route as EmailTrackWhatsappRouteImport } from './routes/email.track.whatsapp'
 import { Route as EmailTrackShowroomRouteImport } from './routes/email.track.showroom'
 import { Route as EmailTrackCartRouteImport } from './routes/email.track.cart'
 import { Route as ApiOrdersCreateRouteImport } from './routes/api/orders.create'
+import { Route as ApiEmailAdminRouteImport } from './routes/api/email/admin'
 import { Route as ApiCommunicationSendRouteImport } from './routes/api/communication/send'
 import { Route as ApiAiProductIntelligenceRouteImport } from './routes/api/ai/product-intelligence'
-import { Route as ApiEmailAdminRouteImport } from './routes/api/email/admin'
 import { Route as ApiPublicWebhooksSendgridRouteImport } from './routes/api/public/webhooks/sendgrid'
 import { Route as ApiPublicHooksEmailMonthlyRouteImport } from './routes/api/public/hooks/email-monthly'
 import { Route as ApiPublicHooksEmailCartRouteImport } from './routes/api/public/hooks/email-cart'
@@ -43,9 +47,19 @@ const StartProjectRoute = StartProjectRouteImport.update({
   path: '/start-project',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShowroomRoute = ShowroomRouteImport.update({
   id: '/showroom',
   path: '/showroom',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrdersRoute = OrdersRouteImport.update({
@@ -88,6 +102,16 @@ const ProductIdRoute = ProductIdRouteImport.update({
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FamilySlugRoute = FamilySlugRouteImport.update({
+  id: '/family/$slug',
+  path: '/family/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CollectionIdRoute = CollectionIdRouteImport.update({
+  id: '/collection/$id',
+  path: '/collection/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategorySlugRoute = CategorySlugRouteImport.update({
   id: '/category/$slug',
   path: '/category/$slug',
@@ -118,21 +142,22 @@ const ApiOrdersCreateRoute = ApiOrdersCreateRouteImport.update({
   path: '/api/orders/create',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCommunicationSendRoute = ApiCommunicationSendRouteImport.update({
-  id: '/api/communication/send',
-  path: '/api/communication/send',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAiProductIntelligenceRoute = ApiAiProductIntelligenceRouteImport.update({
-  id: '/api/ai/product-intelligence',
-  path: '/api/ai/product-intelligence',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiEmailAdminRoute = ApiEmailAdminRouteImport.update({
   id: '/api/email/admin',
   path: '/api/email/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCommunicationSendRoute = ApiCommunicationSendRouteImport.update({
+  id: '/api/communication/send',
+  path: '/api/communication/send',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiProductIntelligenceRoute =
+  ApiAiProductIntelligenceRouteImport.update({
+    id: '/api/ai/product-intelligence',
+    path: '/api/ai/product-intelligence',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksSendgridRoute =
   ApiPublicWebhooksSendgridRouteImport.update({
     id: '/api/public/webhooks/sendgrid',
@@ -159,14 +184,18 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/home': typeof HomeRoute
   '/orders': typeof OrdersRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/showroom': typeof ShowroomRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/start-project': typeof StartProjectRoute
   '/system-login': typeof SystemLoginRoute
   '/api/upload-image': typeof ApiUploadImageRoute
   '/category/$slug': typeof CategorySlugRoute
+  '/collection/$id': typeof CollectionIdRoute
+  '/family/$slug': typeof FamilySlugRoute
   '/product/$id': typeof ProductIdRoute
-  '/api/communication/send': typeof ApiCommunicationSendRoute
   '/api/ai/product-intelligence': typeof ApiAiProductIntelligenceRoute
+  '/api/communication/send': typeof ApiCommunicationSendRoute
   '/api/email/admin': typeof ApiEmailAdminRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
   '/email/track/cart': typeof EmailTrackCartRoute
@@ -184,14 +213,18 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/home': typeof HomeRoute
   '/orders': typeof OrdersRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/showroom': typeof ShowroomRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/start-project': typeof StartProjectRoute
   '/system-login': typeof SystemLoginRoute
   '/api/upload-image': typeof ApiUploadImageRoute
   '/category/$slug': typeof CategorySlugRoute
+  '/collection/$id': typeof CollectionIdRoute
+  '/family/$slug': typeof FamilySlugRoute
   '/product/$id': typeof ProductIdRoute
-  '/api/communication/send': typeof ApiCommunicationSendRoute
   '/api/ai/product-intelligence': typeof ApiAiProductIntelligenceRoute
+  '/api/communication/send': typeof ApiCommunicationSendRoute
   '/api/email/admin': typeof ApiEmailAdminRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
   '/email/track/cart': typeof EmailTrackCartRoute
@@ -210,14 +243,18 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/home': typeof HomeRoute
   '/orders': typeof OrdersRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/showroom': typeof ShowroomRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/start-project': typeof StartProjectRoute
   '/system-login': typeof SystemLoginRoute
   '/api/upload-image': typeof ApiUploadImageRoute
   '/category/$slug': typeof CategorySlugRoute
+  '/collection/$id': typeof CollectionIdRoute
+  '/family/$slug': typeof FamilySlugRoute
   '/product/$id': typeof ProductIdRoute
-  '/api/communication/send': typeof ApiCommunicationSendRoute
   '/api/ai/product-intelligence': typeof ApiAiProductIntelligenceRoute
+  '/api/communication/send': typeof ApiCommunicationSendRoute
   '/api/email/admin': typeof ApiEmailAdminRoute
   '/api/orders/create': typeof ApiOrdersCreateRoute
   '/email/track/cart': typeof EmailTrackCartRoute
@@ -237,14 +274,18 @@ export interface FileRouteTypes {
     | '/contact'
     | '/home'
     | '/orders'
+    | '/robots.txt'
     | '/showroom'
+    | '/sitemap.xml'
     | '/start-project'
     | '/system-login'
     | '/api/upload-image'
     | '/category/$slug'
+    | '/collection/$id'
+    | '/family/$slug'
     | '/product/$id'
-    | '/api/communication/send'
     | '/api/ai/product-intelligence'
+    | '/api/communication/send'
     | '/api/email/admin'
     | '/api/orders/create'
     | '/email/track/cart'
@@ -262,14 +303,18 @@ export interface FileRouteTypes {
     | '/contact'
     | '/home'
     | '/orders'
+    | '/robots.txt'
     | '/showroom'
+    | '/sitemap.xml'
     | '/start-project'
     | '/system-login'
     | '/api/upload-image'
     | '/category/$slug'
+    | '/collection/$id'
+    | '/family/$slug'
     | '/product/$id'
-    | '/api/communication/send'
     | '/api/ai/product-intelligence'
+    | '/api/communication/send'
     | '/api/email/admin'
     | '/api/orders/create'
     | '/email/track/cart'
@@ -287,14 +332,18 @@ export interface FileRouteTypes {
     | '/contact'
     | '/home'
     | '/orders'
+    | '/robots.txt'
     | '/showroom'
+    | '/sitemap.xml'
     | '/start-project'
     | '/system-login'
     | '/api/upload-image'
     | '/category/$slug'
+    | '/collection/$id'
+    | '/family/$slug'
     | '/product/$id'
-    | '/api/communication/send'
     | '/api/ai/product-intelligence'
+    | '/api/communication/send'
     | '/api/email/admin'
     | '/api/orders/create'
     | '/email/track/cart'
@@ -313,14 +362,18 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   HomeRoute: typeof HomeRoute
   OrdersRoute: typeof OrdersRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
   ShowroomRoute: typeof ShowroomRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StartProjectRoute: typeof StartProjectRoute
   SystemLoginRoute: typeof SystemLoginRoute
   ApiUploadImageRoute: typeof ApiUploadImageRoute
   CategorySlugRoute: typeof CategorySlugRoute
+  CollectionIdRoute: typeof CollectionIdRoute
+  FamilySlugRoute: typeof FamilySlugRoute
   ProductIdRoute: typeof ProductIdRoute
-  ApiCommunicationSendRoute: typeof ApiCommunicationSendRoute
   ApiAiProductIntelligenceRoute: typeof ApiAiProductIntelligenceRoute
+  ApiCommunicationSendRoute: typeof ApiCommunicationSendRoute
   ApiEmailAdminRoute: typeof ApiEmailAdminRoute
   ApiOrdersCreateRoute: typeof ApiOrdersCreateRoute
   EmailTrackCartRoute: typeof EmailTrackCartRoute
@@ -347,11 +400,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StartProjectRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/showroom': {
       id: '/showroom'
       path: '/showroom'
       fullPath: '/showroom'
       preLoaderRoute: typeof ShowroomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/orders': {
@@ -410,6 +477,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/family/$slug': {
+      id: '/family/$slug'
+      path: '/family/$slug'
+      fullPath: '/family/$slug'
+      preLoaderRoute: typeof FamilySlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/collection/$id': {
+      id: '/collection/$id'
+      path: '/collection/$id'
+      fullPath: '/collection/$id'
+      preLoaderRoute: typeof CollectionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/category/$slug': {
       id: '/category/$slug'
       path: '/category/$slug'
@@ -452,6 +533,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOrdersCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/email/admin': {
+      id: '/api/email/admin'
+      path: '/api/email/admin'
+      fullPath: '/api/email/admin'
+      preLoaderRoute: typeof ApiEmailAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/communication/send': {
       id: '/api/communication/send'
       path: '/api/communication/send'
@@ -464,13 +552,6 @@ declare module '@tanstack/react-router' {
       path: '/api/ai/product-intelligence'
       fullPath: '/api/ai/product-intelligence'
       preLoaderRoute: typeof ApiAiProductIntelligenceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/email/admin': {
-      id: '/api/email/admin'
-      path: '/api/email/admin'
-      fullPath: '/api/email/admin'
-      preLoaderRoute: typeof ApiEmailAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/sendgrid': {
@@ -505,14 +586,18 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   HomeRoute: HomeRoute,
   OrdersRoute: OrdersRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
   ShowroomRoute: ShowroomRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StartProjectRoute: StartProjectRoute,
   SystemLoginRoute: SystemLoginRoute,
   ApiUploadImageRoute: ApiUploadImageRoute,
   CategorySlugRoute: CategorySlugRoute,
+  CollectionIdRoute: CollectionIdRoute,
+  FamilySlugRoute: FamilySlugRoute,
   ProductIdRoute: ProductIdRoute,
-  ApiCommunicationSendRoute: ApiCommunicationSendRoute,
   ApiAiProductIntelligenceRoute: ApiAiProductIntelligenceRoute,
+  ApiCommunicationSendRoute: ApiCommunicationSendRoute,
   ApiEmailAdminRoute: ApiEmailAdminRoute,
   ApiOrdersCreateRoute: ApiOrdersCreateRoute,
   EmailTrackCartRoute: EmailTrackCartRoute,
