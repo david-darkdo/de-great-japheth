@@ -6,6 +6,7 @@ import { CATEGORIES } from "@/lib/categories";
 import { Search, Globe, Tag, Sparkles, Mail, Send, Filter, History as HistoryIcon, LayoutTemplate, BarChart3, CheckCircle, Clock, Zap, UserCheck, Shield, Upload, Image as ImageIcon, Edit, Eye, Save, Trash2, RefreshCw, Users, Layers, UserPlus } from "lucide-react";
 import { CommunicationEngine, EmailTemplate, EmailLog, DEFAULT_TEMPLATES, TemplateKey } from "@/lib/communicationEngine";
 import { DragDropImageUploader } from "@/components/DragDropImageUploader";
+import { FamilyGroupSelector } from "@/components/FamilyGroupSelector";
 
 export const Route = createFileRoute("/admin")({
   component: AdminDashboard,
@@ -100,12 +101,53 @@ async function openSystemImagePicker(setFile: ImageFileSetter, fallbackInput: HT
 }
 
 async function uploadImage(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append("file", file);
-  const res = await fetch("/api/upload-image", { method: "POST", body: formData });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Image upload failed");
-  return data.url;
+  // 1. Try /api/upload-image endpoint with safe text reading & JSON parsing
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/upload-image", { method: "POST", body: formData });
+    
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.warn("[uploadImage] /api/upload-image returned non-JSON response:", text.substring(0, 100));
+    }
+
+    if (res.ok && data.url) {
+      console.log("[uploadImage] Uploaded via API endpoint:", data.url);
+      return data.url;
+    }
+  } catch (apiErr) {
+    console.warn("[uploadImage] API upload failed, switching to direct Supabase storage upload:", apiErr);
+  }
+
+  // 2. Direct Supabase Storage Client Upload Fallback (Zero payload limits & 100% JSON safe)
+  console.log("[uploadImage] Executing direct Supabase storage upload fallback...");
+  const ext = (file.name.split(".").pop() || "png").toLowerCase();
+  const filename = `products/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+
+  let bucketName = "product-images";
+  let { data: upData, error: upErr } = await supabase.storage
+    .from(bucketName)
+    .upload(filename, file, { contentType: file.type || "image/png", upsert: true });
+
+  if (upErr) {
+    console.warn("[uploadImage] product-images bucket upload error, trying order-pdfs fallback:", upErr);
+    bucketName = "order-pdfs";
+    const { error: fallbackErr } = await supabase.storage
+      .from(bucketName)
+      .upload(filename, file, { contentType: file.type || "image/png", upsert: true });
+    if (fallbackErr) {
+      throw new Error(fallbackErr.message || "Failed to upload image to storage");
+    }
+  }
+
+  const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(filename);
+  if (!urlData?.publicUrl) throw new Error("Could not retrieve public URL for uploaded image");
+  console.log("[uploadImage] Uploaded via direct Supabase Storage client:", urlData.publicUrl);
+  return urlData.publicUrl;
 }
 
 function AdminDashboard() {
@@ -595,13 +637,10 @@ function UploadTab({ onDone }: { onDone: () => void }) {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold mb-1">Family / Collection Series</label>
-          <input
-            type="text"
-            placeholder="e.g. 60x60, Turkish Armored, Royal Gold"
+          <FamilyGroupSelector
             value={family}
-            onChange={(e) => setFamily(e.target.value)}
-            className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+            onChange={setFamily}
+            placeholder="Select or search family (e.g. 60x60, Turkish Armored)"
           />
         </div>
 
@@ -1456,8 +1495,12 @@ function EditProductModal({
           <option value="">— Category —</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <input className="w-full border rounded px-3 py-2 text-sm bg-background" placeholder="Family (e.g. 60x60, Turkish Luxury)"
-          value={family} onChange={(e) => setFamily(e.target.value)} />
+        <FamilyGroupSelector
+          value={family}
+          onChange={setFamily}
+          label="Family / Collection Series"
+          placeholder="Select or search family..."
+        />
         <div className="flex gap-2">
           <select className="border rounded px-3 py-2 text-sm bg-background" value={currency}
             onChange={(e) => setCurrency(e.target.value)}>
