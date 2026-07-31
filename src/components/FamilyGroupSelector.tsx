@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Plus, Check, ChevronDown, Layers, Trash2, Edit2, X, Sparkles } from "lucide-react";
+import { Search, Plus, Check, ChevronDown, Layers, Trash2, X, Sparkles } from "lucide-react";
 
 type FamilyGroupSelectorProps = {
   value: string;
@@ -9,6 +9,23 @@ type FamilyGroupSelectorProps = {
   placeholder?: string;
   required?: boolean;
 };
+
+const STORAGE_KEY = "custom_family_groups_list";
+
+function getSavedCustomFamilies(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomFamilies(list: string[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch {}
+}
 
 export function FamilyGroupSelector({
   value,
@@ -26,29 +43,31 @@ export function FamilyGroupSelector({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newFamilyName, setNewFamilyName] = useState("");
   const [newFamilyDesc, setNewFamilyDesc] = useState("");
-  const [creating, setCreating] = useState(false);
   const [modalError, setModalError] = useState("");
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch unique family groups from Supabase
+  // Fetch unique family groups from Supabase + merge with localStorage
   const loadFamilies = async () => {
     setLoading(true);
     try {
+      const customSaved = getSavedCustomFamilies();
+      const uniqueSet = new Set<string>(customSaved);
+
       const { data, error } = await supabase
         .from("products")
         .select("family")
         .not("family", "is", null);
 
       if (!error && data) {
-        const uniqueSet = new Set<string>();
         data.forEach((p) => {
           if (p.family && p.family.trim()) {
             uniqueSet.add(p.family.trim());
           }
         });
-        setFamilies(Array.from(uniqueSet).sort());
       }
+
+      setFamilies(Array.from(uniqueSet).sort());
     } catch (e) {
       console.error("[FamilyGroupSelector] Error loading families:", e);
     } finally {
@@ -81,8 +100,11 @@ export function FamilyGroupSelector({
     setSearchQuery("");
   };
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateSubmit = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setModalError("");
     const trimmed = newFamilyName.trim();
     if (!trimmed) {
@@ -90,9 +112,16 @@ export function FamilyGroupSelector({
       return;
     }
 
-    // Add to local family list if not present
+    // Add to local family list & save in localStorage
+    let updatedList = families;
     if (!families.includes(trimmed)) {
-      setFamilies((prev) => [...prev, trimmed].sort());
+      updatedList = [...families, trimmed].sort();
+      setFamilies(updatedList);
+
+      const savedCustom = getSavedCustomFamilies();
+      if (!savedCustom.includes(trimmed)) {
+        saveCustomFamilies([...savedCustom, trimmed]);
+      }
     }
 
     // Automatically select the newly created family
@@ -108,7 +137,12 @@ export function FamilyGroupSelector({
   const handleDeleteFamily = (e: React.MouseEvent, familyToDelete: string) => {
     e.stopPropagation();
     if (confirm(`Remove family "${familyToDelete}" from dropdown list?`)) {
-      setFamilies((prev) => prev.filter((f) => f !== familyToDelete));
+      const updated = families.filter((f) => f !== familyToDelete);
+      setFamilies(updated);
+
+      const savedCustom = getSavedCustomFamilies().filter((f) => f !== familyToDelete);
+      saveCustomFamilies(savedCustom);
+
       if (value === familyToDelete) {
         onChange("");
       }
@@ -117,13 +151,15 @@ export function FamilyGroupSelector({
 
   return (
     <div className="relative space-y-1.5" ref={containerRef}>
-      <label className="block text-xs font-semibold text-foreground flex items-center justify-between">
-        <span>
+      <div className="flex items-center justify-between">
+        <label className="block text-xs font-semibold text-foreground">
           {label} {required && <span className="text-red-400">*</span>}
-        </span>
+        </label>
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             setNewFamilyName(searchQuery.trim());
             setShowCreateModal(true);
           }}
@@ -131,7 +167,7 @@ export function FamilyGroupSelector({
         >
           <Plus size={12} /> Inline Create Family
         </button>
-      </label>
+      </div>
 
       {/* Selector Trigger Input Box */}
       <div
@@ -176,6 +212,7 @@ export function FamilyGroupSelector({
                 <button
                   type="button"
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     setNewFamilyName(searchQuery.trim());
                     setShowCreateModal(true);
@@ -219,6 +256,7 @@ export function FamilyGroupSelector({
             <button
               type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 setNewFamilyName(searchQuery.trim());
                 setShowCreateModal(true);
@@ -231,7 +269,7 @@ export function FamilyGroupSelector({
         </div>
       )}
 
-      {/* Inline Create Family Dialog Modal */}
+      {/* Inline Create Family Dialog Modal (Uses DIV instead of nested FORM to prevent outer form submission) */}
       {showCreateModal && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50"
@@ -254,16 +292,21 @@ export function FamilyGroupSelector({
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="space-y-3">
+            <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold mb-1">Family Group Name *</label>
                 <input
                   type="text"
-                  required
                   autoFocus
                   placeholder="e.g. Turkish Armored Series, 60x60 Polish Tile"
                   value={newFamilyName}
                   onChange={(e) => setNewFamilyName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleCreateSubmit(e);
+                    }
+                  }}
                   className="w-full border rounded-md px-3 py-2 text-xs bg-background focus:border-gold focus:outline-none"
                 />
               </div>
@@ -290,13 +333,14 @@ export function FamilyGroupSelector({
                   Cancel
                 </button>
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleCreateSubmit}
                   className="flex-1 py-2 bg-gradient-gold text-black font-semibold text-xs rounded-lg shadow-gold hover:opacity-90 transition"
                 >
                   Save & Select
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
