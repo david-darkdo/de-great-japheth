@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getCollectionUrl } from "@/lib/url";
 
 export const Route = createFileRoute("/cart")({
-  head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAPHET" }] }),
+  head: () => ({ meta: [{ title: "Your Selection — DE GREAT JAPHET" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: CartPage,
 });
 

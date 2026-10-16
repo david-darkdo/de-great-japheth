@@ -8,5 +8,4 @@ Disallow: /api/
 Disallow: /auth
 
 # Search Engine Sitemaps
-Sitemap: https://thegreatjapheth.com.ng/sitemap.xml
 Sitemap: https://degreatjaphet.com.ng/sitemap.xml

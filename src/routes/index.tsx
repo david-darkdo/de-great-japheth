@@ -22,8 +22,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "DE GREAT JAPHET — Living Greatfull | Premium Building Materials" },
-      { name: "description", content: "We supply and install high-quality building materials for modern interiors and construction finishing." },
+      { name: "description", content: "Shop premium tiles, doors, sanitary ware and building finishes in Nigeria. Explore the DE GREAT JAPHET showroom." },
     ],
+    links: [{ rel: "canonical", href: "https://degreatjaphet.com.ng/" }],
   }),
   component: HomePage,
 });
