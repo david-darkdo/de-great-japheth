@@ -34,6 +34,15 @@ type Product = {
   updated_at?: string;
 };
 
+function toMetaDescription(value: string | null | undefined): string {
+  const plainText = (value || "Premium building materials and architectural finishing by DE GREAT JAPHET.")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim();
+  if (plainText.length <= 160) return plainText;
+  return `${plainText.slice(0, 157).trimEnd()}...`;
+}
+
 async function fetchProductByParam(idParam: string): Promise<Product | null> {
   if (!idParam) return null;
   const cleanParam = decodeURIComponent(idParam).trim();
@@ -89,7 +98,7 @@ export const Route = createFileRoute("/product/$id")({
   head: ({ loaderData }: any) => {
     const prod = loaderData;
     const title = prod?.seo_title || (prod?.product_name ? `${prod.product_name} | DE GREAT JAPHET` : "Product | DE GREAT JAPHET");
-    const desc = prod?.meta_description || prod?.full_details || "Premium building materials and architectural finishing by De Great Japhet.";
+    const desc = toMetaDescription(prod?.meta_description || prod?.product_summary || prod?.full_details);
     const img = prod?.product_image || getPublicUrl("/hero-interior.jpg");
     const canonical = getProductUrl(prod?.slug || prod?.id || "");
     const keywords = Array.isArray(prod?.seo_keywords) ? prod.seo_keywords.join(", ") : (prod?.seo_keywords || "");
@@ -191,7 +200,7 @@ function ProductPage() {
     "@type": "Product",
     "name": product.canonical_product_name || product.product_name,
     "image": [product.product_image, product.finished_image].filter(Boolean),
-    "description": product.meta_description || product.full_details || product.product_name,
+    "description": toMetaDescription(product.meta_description || product.product_summary || product.full_details || product.product_name),
     "sku": product.item_code || product.product_code || product.id,
     "brand": {
       "@type": "Brand",
@@ -206,7 +215,8 @@ function ProductPage() {
       "seller": {
         "@type": "Organization",
         "name": "De Great Japhet",
-        "url": getPublicUrl()
+        "url": getPublicUrl(),
+        "logo": "https://degreatjaphet.com.ng/favicon.ico"
       }
     }
   };
